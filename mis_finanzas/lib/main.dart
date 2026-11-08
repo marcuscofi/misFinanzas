@@ -1,36 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+// Importaremos las opciones generadas automáticamente o las pasaremos por parámetros
 
-void main() {
+void main() async {
+  // Asegura que los bindings de Flutter estén listos
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inicializa Firebase para Web/Móvil
+  await Firebase.initializeApp(
+    options: const FirebaseOptions(
+      apiKey: "AIzaSyAYTRad7VgUM0L2RryP68tWNXtzMvCc0s",
+      appId: "1:70807927015:web:1069556e1e09de5bc50a42",
+      messagingSenderId: "70807927015",
+      projectId: "misgastos-1291c",
+      databaseURL: "https://misgastos-1291c-default-rtdb.firebaseio.com",
+      storageBucket: "misgastos-1291c.firebasestorage.app",
+    ),
+  );
+
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+      title: 'Mis Finanzas',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const Scaffold(
+        body: Center(
+          child: Text('¡Firebase conectado en Flutter con éxito!'),
+        ),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
