@@ -1,22 +1,20 @@
-import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
-// Importaremos las opciones generadas automáticamente o las pasaremos por parámetros
+import 'package:flutter/material.dart';
 
-void main() async {
-  // Asegura que los bindings de Flutter estén listos
+import 'firebase_options.dart';
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Inicializa Firebase para Web/Móvil
+
   await Firebase.initializeApp(
-    options: const FirebaseOptions(
-      apiKey: "AIzaSyAYtRAd7VgUM0L2RryxP68twNXtzMVcc0s",
-      authDomain: "misgastos-1291c.firebaseapp.com",
-      databaseURL: "https://misgastos-1291c-default-rtdb.firebaseio.com",
-      projectId: "misgastos-1291c",
-      storageBucket: "misgastos-1291c.firebasestorage.app",
-      messagingSenderId: "70807927015",
-      appId: "1:70807927015:web:1069556e1e09de5bc50a42",
-    ),
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Debe ejecutarse antes de cualquier otra operación con Firestore.
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
 
   runApp(const MyApp());
@@ -29,11 +27,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Mis Finanzas',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.teal,
+      ),
       home: const Scaffold(
-        body: Center(
-          child: Text('¡Firebase conectado en Flutter con éxito!'),
-        ),
+        body: Center(child: Text('¡Firebase conectado en Flutter con éxito!')),
       ),
     );
   }
