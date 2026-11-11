@@ -7,12 +7,12 @@ import '../widgets/formulario_transaccion.dart';
 import 'ahorro_page.dart';
 import 'inicio_page.dart';
 import 'movimientos_page.dart';
-import 'tarjetas_page.dart';
+import 'banca_page.dart';
 
 const _destinos = [
   (icono: Icons.home_outlined, activo: Icons.home_rounded, texto: 'Inicio'),
   (icono: Icons.receipt_long_outlined, activo: Icons.receipt_long, texto: 'Movimientos'),
-  (icono: Icons.credit_card_outlined, activo: Icons.credit_card, texto: 'Tarjetas'),
+  (icono: Icons.account_balance_wallet_outlined, activo: Icons.account_balance_wallet, texto: 'Banca'),
   (icono: Icons.savings_outlined, activo: Icons.savings, texto: 'Ahorro'),
 ];
 
@@ -48,7 +48,7 @@ class _HomeShellState extends State<HomeShell> {
         final cuerpo = IndexedStack(index: _tab, children: [
           InicioPage(repo: _repo, onVerTodos: () => setState(() => _tab = 1)),
           MovimientosPage(repo: _repo),
-          TarjetasPage(repo: _repo),
+          BancaPage(repo: _repo),
           AhorroPage(repo: _repo),
         ]);
 

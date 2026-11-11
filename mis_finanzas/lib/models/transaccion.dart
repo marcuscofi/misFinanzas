@@ -28,7 +28,7 @@ class Transaccion {
   final String descripcion;
   final DateTime fecha;
 
-  /// 'efectivo' o el id de una tarjeta. Los ingresos siempre son 'efectivo'.
+  /// 'efectivo', el id de una cuenta bancaria/débito o el de una tarjeta.
   final String cuentaId;
 
   bool get afectaEfectivo => cuentaId == cuentaEfectivo;

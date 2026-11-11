@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../models/cuenta_bancaria.dart';
 import '../models/plan_ahorro.dart';
 import '../models/tarjeta.dart';
 import '../models/transaccion.dart';
@@ -10,6 +11,18 @@ DateTime _dia(DateTime d) => DateTime(d.year, d.month, d.day);
 int calcularBalanceEfectivo(List<Transaccion> movs) => movs
     .where((t) => t.afectaEfectivo)
     .fold(0, (a, t) => a + t.centavosConSigno);
+
+/// Saldo acumulado de una cuenta bancaria o tarjeta de débito:
+/// ingresos − gastos asociados a [cuentaId].
+int calcularSaldoCuenta(List<Transaccion> movs, String cuentaId) => movs
+    .where((t) => t.cuentaId == cuentaId)
+    .fold(0, (a, t) => a + t.centavosConSigno);
+
+/// Líquido total disponible: efectivo + saldo de las cuentas bancarias/débito.
+int calcularLiquidoTotal(
+        List<Transaccion> movs, List<CuentaBancaria> cuentas) =>
+    calcularBalanceEfectivo(movs) +
+    cuentas.fold(0, (a, c) => a + calcularSaldoCuenta(movs, c.id));
 
 class EstadoTarjeta {
   const EstadoTarjeta(this.tarjeta, this.gastadoMes);
@@ -63,12 +76,13 @@ class PresupuestoSemanal {
     required this.asignacion,
     required this.semanasRestantes,
     required this.efectivoLibre,
+    required this.cuentasRestante,
     required this.tarjetasRestante,
     required this.ahorroApartado,
   });
   final DateTime inicio, fin; // lunes a domingo
   final int disponible, gastado, asignacion, semanasRestantes;
-  final int efectivoLibre, tarjetasRestante, ahorroApartado;
+  final int efectivoLibre, cuentasRestante, tarjetasRestante, ahorroApartado;
 
   /// Lo que aún puedes gastar esta semana (negativo = te pasaste).
   int get quedan => asignacion - gastado;
@@ -82,15 +96,22 @@ PresupuestoSemanal calcularSemana({
   required List<Tarjeta> tarjetas, // solo activas
   required List<PlanAhorro> planes,
   required DateTime ahora,
+  List<CuentaBancaria> cuentasBancarias = const [],
 }) {
   final hoy = _dia(ahora);
   final inicio = DateTime(hoy.year, hoy.month, hoy.day - (hoy.weekday - 1));
   final fin = DateTime(inicio.year, inicio.month, inicio.day + 6);
   final inicioMes = DateTime(hoy.year, hoy.month);
   final finMes = DateTime(hoy.year, hoy.month + 1);
-  final ids = {for (final t in tarjetas) t.id};
+  // Cálculo exacto de las semanas restantes del mes basándonos en los días que faltan
+  final ultimoDiaMes = DateTime(hoy.year, hoy.month + 1, 0).day;
+  final diasRestantesEnMes = ultimoDiaMes - hoy.day;
+  final idsTarjetas = {for (final t in tarjetas) t.id};
+  final idsCuentas = {for (final c in cuentasBancarias) c.id};
 
   final efectivo = calcularBalanceEfectivo(movs);
+  final cuentasSaldo = cuentasBancarias.fold<int>(
+      0, (a, c) => a + calcularSaldoCuenta(movs, c.id));
   final ahorro = planes.fold<int>(0, (a, p) => a + ahorroPlan(p, movs, ahora));
   final tarjetasRestante = estadoTarjetas(movs, tarjetas, ahora)
       .fold<int>(0, (a, e) => a + e.restante);
@@ -102,20 +123,18 @@ PresupuestoSemanal calcularSemana({
     final d = _dia(t.fecha);
     if (d.isBefore(inicio) || d.isAfter(fin)) continue;
     final enMes = !d.isBefore(inicioMes) && d.isBefore(finMes);
-    if (t.afectaEfectivo || (ids.contains(t.cuentaId) && enMes)) {
+    if (t.afectaEfectivo ||
+        idsCuentas.contains(t.cuentaId) ||
+        (idsTarjetas.contains(t.cuentaId) && enMes)) {
       gastado += t.montoCentavos;
     }
   }
 
-  // Semana actual + lunes que aún caen dentro del mes.
-  var semanas = 1;
-  for (var d = DateTime(hoy.year, hoy.month, hoy.day + 1);
-      d.isBefore(finMes);
-      d = DateTime(d.year, d.month, d.day + 1)) {
-    if (d.weekday == DateTime.monday) semanas++;
-  }
+  // Semanas enteras restantes (mínimo 1)
+  var semanas = (diasRestantesEnMes / 7).floor();
+  if (semanas < 1) semanas = 1;
 
-  final disponible = efectivo - ahorro + tarjetasRestante;
+  final disponible = efectivo + cuentasSaldo - ahorro + tarjetasRestante;
   final asignacion = math.max(0, (disponible + gastado) ~/ semanas);
 
   return PresupuestoSemanal(
@@ -126,6 +145,7 @@ PresupuestoSemanal calcularSemana({
     asignacion: asignacion,
     semanasRestantes: semanas,
     efectivoLibre: efectivo - ahorro,
+    cuentasRestante: cuentasSaldo,
     tarjetasRestante: tarjetasRestante,
     ahorroApartado: ahorro,
   );
