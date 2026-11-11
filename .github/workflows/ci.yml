@@ -34,7 +34,8 @@ jobs:
 
       - name: Run Flutter Analyze (Ignoring Warnings & Infos)
         run: |
-          output=$(flutter analyze --no-pub)
+          # Añadimos '|| true' para evitar que el exit code 1 de flutter analyze rompa el script de inmediato
+          output=$(flutter analyze --no-pub || true)
           echo "$output"
           
           if echo "$output" | grep -q "error •"; then
