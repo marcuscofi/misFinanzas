@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+
 import '../models/transaccion.dart';
-import '../services/transacciones_service.dart';
+import '../services/finanzas_repo.dart';
 import '../utils/analisis.dart';
 import '../utils/formato.dart';
 import 'mascota.dart';
 
+/// Con [inicial] abre en modo edición.
 Future<void> mostrarFormularioTransaccion(
   BuildContext context,
-  TransaccionesService service, {
-  required int balanceCentavos,
+  FinanzasRepo repo, {
+  Transaccion? inicial,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -16,34 +18,54 @@ Future<void> mostrarFormularioTransaccion(
     useSafeArea: true,
     showDragHandle: true,
     constraints: const BoxConstraints(maxWidth: 520),
-    builder: (_) => _Formulario(service: service, balance: balanceCentavos),
+    builder: (_) => _Formulario(repo: repo, inicial: inicial),
   );
 }
 
 class _Formulario extends StatefulWidget {
-  const _Formulario({required this.service, required this.balance});
-  final TransaccionesService service;
-  final int balance;
-
+  const _Formulario({required this.repo, this.inicial});
+  final FinanzasRepo repo;
+  final Transaccion? inicial;
   @override
   State<_Formulario> createState() => _FormularioState();
 }
 
 class _FormularioState extends State<_Formulario> {
   final _formKey = GlobalKey<FormState>();
-  final _monto = TextEditingController();
-  final _descripcion = TextEditingController();
-  TipoTransaccion _tipo = TipoTransaccion.gasto;
-  String _categoria = categoriasGasto.first;
-  DateTime _fecha = DateTime.now();
+  late final _monto = TextEditingController(
+      text: widget.inicial == null
+          ? ''
+          : (widget.inicial!.montoCentavos / 100).toStringAsFixed(2));
+  late final _descripcion =
+      TextEditingController(text: widget.inicial?.descripcion ?? '');
+  late TipoTransaccion _tipo = widget.inicial?.tipo ?? TipoTransaccion.gasto;
+  late String _categoria = widget.inicial?.categoria ??
+      (_tipo == TipoTransaccion.gasto ? categoriasGasto.first : categoriasIngreso.first);
+  late String _cuentaId = widget.inicial?.cuentaId ?? cuentaEfectivo;
+  late DateTime _fecha = widget.inicial?.fecha ?? DateTime.now();
 
-  List<String> get _categorias =>
-      _tipo == TipoTransaccion.gasto ? categoriasGasto : categoriasIngreso;
+  bool get _editando => widget.inicial != null;
+
+  List<String> get _categorias {
+    final base = _tipo == TipoTransaccion.gasto ? categoriasGasto : categoriasIngreso;
+    return base.contains(_categoria) ? base : [...base, _categoria];
+  }
+
+  List<(String, String)> get _cuentas {
+    final l = [
+      (cuentaEfectivo, 'Efectivo'),
+      for (final t in widget.repo.tarjetas) (t.id, t.nombre),
+    ];
+    if (!l.any((c) => c.$1 == _cuentaId)) {
+      l.add((_cuentaId, widget.repo.nombreCuenta(_cuentaId)));
+    }
+    return l;
+  }
 
   @override
   void initState() {
     super.initState();
-    _monto.addListener(() => setState(() {})); // la mascota reacciona al escribir
+    _monto.addListener(() => setState(() {}));
   }
 
   @override
@@ -53,26 +75,57 @@ class _FormularioState extends State<_Formulario> {
     super.dispose();
   }
 
+  /// Contra qué se compara el monto para la reacción de la mascota.
+  int _referencia() {
+    final repo = widget.repo;
+    var ref = _cuentaId == cuentaEfectivo
+        ? repo.balanceEfectivo
+        : repo.restanteTarjeta(_cuentaId);
+    final o = widget.inicial;
+    if (o != null && o.tipo == TipoTransaccion.gasto && o.cuentaId == _cuentaId) {
+      ref += o.montoCentavos; // al editar, el gasto original ya estaba descontado
+    }
+    return ref;
+  }
+
+  String _pista() {
+    final repo = widget.repo;
+    if (_cuentaId == cuentaEfectivo) {
+      return 'Efectivo libre: ${formatoUsd(repo.balanceEfectivo - repo.ahorroTotal)}';
+    }
+    return 'Restante en esta tarjeta este mes: ${formatoUsd(repo.restanteTarjeta(_cuentaId))}';
+  }
+
   Future<void> _elegirFecha() async {
     final hoy = DateTime.now();
+    final minimo = DateTime(hoy.year - 5);
     final f = await showDatePicker(
       context: context,
       initialDate: _fecha,
-      firstDate: DateTime(hoy.year - 5),
-      lastDate: hoy,
+      firstDate: minimo.isBefore(_fecha) ? minimo : _fecha,
+      lastDate: hoy.isAfter(_fecha) ? hoy : _fecha,
     );
     if (f != null) setState(() => _fecha = f);
   }
 
   void _guardar() {
     if (!_formKey.currentState!.validate()) return;
-    widget.service.agregar(Transaccion(
+    final base = widget.inicial;
+    final t = Transaccion(
+      id: base?.id ?? '',
       montoCentavos: parseCentavos(_monto.text)!,
       tipo: _tipo,
       categoria: _categoria,
       descripcion: _descripcion.text.trim(),
       fecha: _fecha,
-    ));
+      cuentaId: _tipo == TipoTransaccion.ingreso ? cuentaEfectivo : _cuentaId,
+    );
+    // Sin await: offline el Future no se completa, pero el stream ya refleja el cambio.
+    if (base == null) {
+      widget.repo.transacciones.agregar(t);
+    } else {
+      widget.repo.transacciones.actualizar(t);
+    }
     Navigator.of(context).pop();
   }
 
@@ -82,7 +135,7 @@ class _FormularioState extends State<_Formulario> {
     final lectura = reaccionAlMonto(
       tipo: _tipo,
       centavos: parseCentavos(_monto.text) ?? 0,
-      balance: widget.balance,
+      balance: _referencia(),
     );
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -97,8 +150,7 @@ class _FormularioState extends State<_Formulario> {
               Row(children: [
                 Mascota(lectura.estado, tamano: 84),
                 const SizedBox(width: 12),
-                Expanded(
-                    child: Text(lectura.mensaje, style: tema.textTheme.bodyLarge)),
+                Expanded(child: Text(lectura.mensaje, style: tema.textTheme.bodyLarge)),
               ]),
               const SizedBox(height: 12),
               SegmentedButton<TipoTransaccion>(
@@ -121,9 +173,8 @@ class _FormularioState extends State<_Formulario> {
               const SizedBox(height: 20),
               TextFormField(
                 controller: _monto,
-                autofocus: true,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                autofocus: !_editando,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 style: tema.textTheme.headlineMedium,
                 decoration: const InputDecoration(prefixText: r'$ ', hintText: '0.00'),
                 validator: (v) {
@@ -142,12 +193,33 @@ class _FormularioState extends State<_Formulario> {
                     onSelected: (_) => setState(() => _categoria = c),
                   ),
               ]),
+              if (_tipo == TipoTransaccion.gasto) ...[
+                const SizedBox(height: 16),
+                Text('Pagar con',
+                    style: tema.textTheme.labelLarge
+                        ?.copyWith(color: tema.colorScheme.outline)),
+                const SizedBox(height: 8),
+                Wrap(spacing: 8, runSpacing: 4, children: [
+                  for (final (id, nombre) in _cuentas)
+                    ChoiceChip(
+                      avatar: Icon(
+                          id == cuentaEfectivo ? Icons.payments_outlined : Icons.credit_card,
+                          size: 16),
+                      label: Text(nombre),
+                      selected: _cuentaId == id,
+                      onSelected: (_) => setState(() => _cuentaId = id),
+                    ),
+                ]),
+                const SizedBox(height: 6),
+                Text(_pista(),
+                    style: tema.textTheme.bodySmall
+                        ?.copyWith(color: tema.colorScheme.outline)),
+              ],
               const SizedBox(height: 16),
               TextFormField(
                 controller: _descripcion,
                 textCapitalization: TextCapitalization.sentences,
-                decoration:
-                    const InputDecoration(labelText: 'Descripción (opcional)'),
+                decoration: const InputDecoration(labelText: 'Descripción (opcional)'),
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
@@ -159,7 +231,7 @@ class _FormularioState extends State<_Formulario> {
               FilledButton.icon(
                 onPressed: _guardar,
                 icon: const Icon(Icons.check),
-                label: const Text('Guardar'),
+                label: Text(_editando ? 'Guardar cambios' : 'Guardar'),
               ),
             ],
           ),

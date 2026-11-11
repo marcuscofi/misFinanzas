@@ -1,11 +1,20 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../services/transacciones_service.dart';
+import '../services/finanzas_repo.dart';
 import '../theme/paleta.dart';
 import '../widgets/formulario_transaccion.dart';
+import 'ahorro_page.dart';
 import 'inicio_page.dart';
 import 'movimientos_page.dart';
+import 'tarjetas_page.dart';
+
+const _destinos = [
+  (icono: Icons.home_outlined, activo: Icons.home_rounded, texto: 'Inicio'),
+  (icono: Icons.receipt_long_outlined, activo: Icons.receipt_long, texto: 'Movimientos'),
+  (icono: Icons.credit_card_outlined, activo: Icons.credit_card, texto: 'Tarjetas'),
+  (icono: Icons.savings_outlined, activo: Icons.savings, texto: 'Ahorro'),
+];
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, required this.user});
@@ -15,43 +24,44 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
-  late final TransaccionesService _service =
-      TransaccionesService(widget.user.uid);
-  late final Stream<LoteTransacciones> _stream = _service.observar();
+  late final FinanzasRepo _repo = FinanzasRepo(widget.user.uid);
   int _tab = 0;
 
   @override
+  void dispose() {
+    _repo.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return StreamBuilder<LoteTransacciones>(
-      stream: _stream,
-      builder: (context, snap) {
-        if (snap.hasError) {
-          return Scaffold(body: Center(child: Text('Error: ${snap.error}')));
+    return ListenableBuilder(
+      listenable: _repo,
+      builder: (context, _) {
+        if (_repo.error != null) {
+          return Scaffold(body: Center(child: Text('Error: ${_repo.error}')));
         }
-        if (!snap.hasData) {
+        if (!_repo.listo) {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
-        final lote = snap.data!;
-        final balance = lote.items.fold<int>(0, (a, t) => a + t.centavosConSigno);
 
         final cuerpo = IndexedStack(index: _tab, children: [
-          InicioPage(
-            lote: lote,
-            balance: balance,
-            service: _service,
-            onVerTodos: () => setState(() => _tab = 1),
-          ),
-          MovimientosPage(lote: lote, service: _service),
+          InicioPage(repo: _repo, onVerTodos: () => setState(() => _tab = 1)),
+          MovimientosPage(repo: _repo),
+          TarjetasPage(repo: _repo),
+          AhorroPage(repo: _repo),
         ]);
 
-        final fab = FloatingActionButton.extended(
-          backgroundColor: Paleta.lima,
-          foregroundColor: Colors.black,
-          onPressed: () => mostrarFormularioTransaccion(context, _service,
-              balanceCentavos: balance),
-          icon: const Icon(Icons.add),
-          label: const Text('Nuevo'),
-        );
+        // El botón "Nuevo" solo en Inicio y Movimientos.
+        final fab = _tab <= 1
+            ? FloatingActionButton.extended(
+                backgroundColor: Paleta.lima,
+                foregroundColor: Colors.black,
+                onPressed: () => mostrarFormularioTransaccion(context, _repo),
+                icon: const Icon(Icons.add),
+                label: const Text('Nuevo'),
+              )
+            : null;
 
         return LayoutBuilder(builder: (context, c) {
           if (c.maxWidth >= 840) {
@@ -62,15 +72,12 @@ class _HomeShellState extends State<HomeShell> {
                   selectedIndex: _tab,
                   onDestinationSelected: (i) => setState(() => _tab = i),
                   labelType: NavigationRailLabelType.all,
-                  destinations: const [
-                    NavigationRailDestination(
-                        icon: Icon(Icons.home_outlined),
-                        selectedIcon: Icon(Icons.home_rounded),
-                        label: Text('Inicio')),
-                    NavigationRailDestination(
-                        icon: Icon(Icons.receipt_long_outlined),
-                        selectedIcon: Icon(Icons.receipt_long),
-                        label: Text('Movimientos')),
+                  destinations: [
+                    for (final d in _destinos)
+                      NavigationRailDestination(
+                          icon: Icon(d.icono),
+                          selectedIcon: Icon(d.activo),
+                          label: Text(d.texto)),
                   ],
                 ),
                 const VerticalDivider(width: 1, color: Colors.white10),
@@ -84,15 +91,12 @@ class _HomeShellState extends State<HomeShell> {
             bottomNavigationBar: NavigationBar(
               selectedIndex: _tab,
               onDestinationSelected: (i) => setState(() => _tab = i),
-              destinations: const [
-                NavigationDestination(
-                    icon: Icon(Icons.home_outlined),
-                    selectedIcon: Icon(Icons.home_rounded),
-                    label: 'Inicio'),
-                NavigationDestination(
-                    icon: Icon(Icons.receipt_long_outlined),
-                    selectedIcon: Icon(Icons.receipt_long),
-                    label: 'Movimientos'),
+              destinations: [
+                for (final d in _destinos)
+                  NavigationDestination(
+                      icon: Icon(d.icono),
+                      selectedIcon: Icon(d.activo),
+                      label: d.texto),
               ],
             ),
           );

@@ -20,10 +20,14 @@ class MovimientoTile extends StatelessWidget {
     required this.t,
     required this.onEliminar,
     this.mostrarFecha = false,
+    this.cuenta,
+    this.onTap,
   });
   final Transaccion t;
   final VoidCallback onEliminar;
   final bool mostrarFecha;
+  final String? cuenta;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +36,12 @@ class MovimientoTile extends StatelessWidget {
     final color = ingreso ? Paleta.esmeralda : Paleta.gasto;
     return ListTile(
       contentPadding: const EdgeInsets.only(left: 12, right: 4),
+      onTap: onTap,
+      subtitle: Text([
+        t.categoria,
+        if (cuenta != null) cuenta!,
+        if (mostrarFecha) fechaCorta(t.fecha),
+      ].join(' · ')),
       leading: Container(
         width: 44,
         height: 44,
@@ -44,8 +54,6 @@ class MovimientoTile extends StatelessWidget {
       ),
       title: Text(t.descripcion.isEmpty ? t.categoria : t.descripcion,
           maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(
-          mostrarFecha ? '${t.categoria} · ${fechaCorta(t.fecha)}' : t.categoria),
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
         Text('${ingreso ? '+' : '-'}${formatoUsd(t.montoCentavos)}',
             style: tema.textTheme.titleMedium

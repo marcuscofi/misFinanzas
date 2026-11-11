@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../services/transacciones_service.dart';
+import '../services/finanzas_repo.dart';
 import '../theme/paleta.dart';
 import '../utils/analisis.dart';
 import '../utils/formato.dart';
@@ -11,19 +11,18 @@ import '../widgets/grafica_gastos.dart';
 import '../widgets/mascota.dart';
 import '../widgets/movimiento_tile.dart';
 import '../widgets/sync_chip.dart';
+import '../widgets/semana_card.dart';
+import '../widgets/formulario_transaccion.dart';
+import '../models/transaccion.dart';
 
 class InicioPage extends StatefulWidget {
   const InicioPage({
     super.key,
-    required this.lote,
-    required this.balance,
-    required this.service,
+    required this.repo,
     required this.onVerTodos,
   });
-  final LoteTransacciones lote;
-  final int balance;
-  final TransaccionesService service;
   final VoidCallback onVerTodos;
+  final FinanzasRepo repo;
 
   @override
   State<InicioPage> createState() => _InicioPageState();
@@ -68,15 +67,17 @@ class _InicioPageState extends State<InicioPage> {
 
   @override
   Widget build(BuildContext context) {
-    final movs = widget.lote.items;
+    final movs = widget.repo.lote.items;
     final r = analizar(movs, _periodo, DateTime.now());
     final lectura = evaluarMascota(
-        balance: widget.balance, r: r, hayDatos: movs.isNotEmpty);
+        balance: widget.repo.balanceEfectivo, r: r, hayDatos: movs.isNotEmpty);
 
     final izq = <Widget>[
       _cabecera(),
       const SizedBox(height: 8),
       _tarjetaMascota(lectura),
+      const SizedBox(height: 12),
+      SemanaCard(s: widget.repo.semana),
       const SizedBox(height: 12),
       _tarjetaGrafica(r),
     ];
@@ -102,7 +103,9 @@ class _InicioPageState extends State<InicioPage> {
           t: t,
           mostrarFecha: true,
           onEliminar: () =>
-              eliminarTransaccion(context, widget.service, t, confirmar: true),
+              eliminarTransaccion(context, widget.repo.transacciones, t, confirmar: true),
+          cuenta: t.tipo == TipoTransaccion.gasto ? widget.repo.nombreCuenta(t.cuentaId) : null,
+          onTap: () => mostrarFormularioTransaccion(context, widget.repo, inicial: t),
         ),
     ];
 
@@ -134,7 +137,7 @@ class _InicioPageState extends State<InicioPage> {
                   .headlineSmall
                   ?.copyWith(fontWeight: FontWeight.w800)),
         ),
-        SyncChip(lote: widget.lote),
+        SyncChip(lote: widget.repo.lote),
         IconButton(
           tooltip: 'Cerrar sesión',
           icon: const Icon(Icons.logout),
@@ -162,7 +165,7 @@ class _InicioPageState extends State<InicioPage> {
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: Text(formatoUsd(widget.balance),
+              child: Text(formatoUsd(widget.repo.balanceEfectivo),
                   style: tema.textTheme.displaySmall
                       ?.copyWith(fontWeight: FontWeight.w800)),
             ),
