@@ -1,0 +1,4208 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.github/
+  workflows/
+    ci.yml
+mis_finanzas/
+  .vscode/
+    launch.json
+  assets/
+    mascota/
+      ahorro.png
+      bolsa.png
+      celebra.png
+      escritorio.png
+      hucha.png
+      meta.png
+      panico.png
+      preocupado.png
+      sudando.png
+  lib/
+    config/
+      firebase_config.dart
+    models/
+      estado_mascota.dart
+      plan_ahorro.dart
+      tarjeta.dart
+      transaccion.dart
+    screens/
+      ahorro_page.dart
+      auth_gate.dart
+      home_shell.dart
+      inicio_page.dart
+      login_page.dart
+      movimientos_page.dart
+      tarjetas_page.dart
+    services/
+      finanzas_repo.dart
+      planes_service.dart
+      tarjetas_service.dart
+      transacciones_service.dart
+    theme/
+      paleta.dart
+      tema.dart
+    utils/
+      analisis.dart
+      formato.dart
+      presupuesto.dart
+    widgets/
+      acciones_transaccion.dart
+      formulario_transaccion.dart
+      glass_card.dart
+      grafica_gastos.dart
+      mascota.dart
+      movimiento_tile.dart
+      plan_form.dart
+      semana_card.dart
+      sync_chip.dart
+      tarjeta_form.dart
+    main.dart
+  test/
+    analisis_test.dart
+    widget_test.dart
+  web/
+    icons/
+      Icon-192.png
+      Icon-512.png
+      Icon-maskable-192.png
+      Icon-maskable-512.png
+    favicon.png
+    index.html
+    manifest.json
+  .gitignore
+  .metadata
+  analysis_options.yaml
+  build.sh
+  firebase.json
+  pubspec.lock
+  pubspec.yaml
+  README.md
+README.md
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="mis_finanzas/.vscode/launch.json">
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "mis_finanzas (web:8080)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "cwd": "mis_finanzas", 
+      "deviceId": "web-server",
+      "args": ["--web-port", "8080", "--dart-define-from-file=env.json"]
+    }
+  ]
+}
+</file>
+
+<file path="mis_finanzas/lib/config/firebase_config.dart">
+import 'package:firebase_core/firebase_core.dart';
+
+/// Los valores se inyectan en compilación con --dart-define.
+/// Nunca se escriben en el código.
+class FirebaseConfig {
+  static const _apiKey = String.fromEnvironment('FIREBASE_API_KEY');
+  static const _appId = String.fromEnvironment('FIREBASE_APP_ID');
+  static const _senderId =
+      String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');
+  static const _projectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
+  static const _authDomain = String.fromEnvironment('FIREBASE_AUTH_DOMAIN');
+  static const _storageBucket =
+      String.fromEnvironment('FIREBASE_STORAGE_BUCKET');
+
+  static const options = FirebaseOptions(
+    apiKey: _apiKey,
+    appId: _appId,
+    messagingSenderId: _senderId,
+    projectId: _projectId,
+    authDomain: _authDomain,
+    storageBucket: _storageBucket,
+  );
+
+  /// Falla con un mensaje claro si falta alguna variable.
+  static void validar() {
+    const requeridas = {
+      'FIREBASE_API_KEY': _apiKey,
+      'FIREBASE_APP_ID': _appId,
+      'FIREBASE_MESSAGING_SENDER_ID': _senderId,
+      'FIREBASE_PROJECT_ID': _projectId,
+      'FIREBASE_AUTH_DOMAIN': _authDomain,
+    };
+    final faltan =
+        requeridas.entries.where((e) => e.value.isEmpty).map((e) => e.key);
+    if (faltan.isNotEmpty) {
+      throw StateError(
+        'Faltan variables de entorno: ${faltan.join(', ')}. '
+        'Compila con --dart-define-from-file=env.json',
+      );
+    }
+  }
+}
+</file>
+
+<file path="mis_finanzas/lib/models/estado_mascota.dart">
+enum EstadoMascota {
+  hucha, bolsa, celebra, // positivos
+  ahorro, escritorio, meta, // neutros / ahorro
+  preocupado, sudando, panico; // alerta
+
+  String get asset => 'assets/mascota/$name.png';
+}
+</file>
+
+<file path="mis_finanzas/lib/models/plan_ahorro.dart">
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+enum ReglaAhorro { porcentaje, montoFijo }
+
+class PlanAhorro {
+  const PlanAhorro({
+    this.id = '',
+    required this.nombre,
+    required this.regla,
+    required this.valor,
+    this.objetivoCentavos,
+    required this.desde,
+    this.hasta,
+  });
+
+  final String id;
+  final String nombre;
+  final ReglaAhorro regla;
+
+  /// porcentaje: 1–100 (% de tus ingresos). montoFijo: centavos por mes.
+  final int valor;
+
+  /// Meta total opcional (ej. $1,200 para un viaje).
+  final int? objetivoCentavos;
+  final DateTime desde;
+
+  /// null = plan activo. Con fecha = detenido (lo acumulado se conserva).
+  final DateTime? hasta;
+
+  bool get activo => hasta == null;
+
+  factory PlanAhorro.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final d = doc.data()!;
+    return PlanAhorro(
+      id: doc.id,
+      nombre: d['nombre'] as String? ?? 'Plan',
+      regla: ReglaAhorro.values.byName(d['regla'] as String),
+      valor: (d['valor'] as num).toInt(),
+      objetivoCentavos: (d['objetivoCentavos'] as num?)?.toInt(),
+      desde: (d['desde'] as Timestamp).toDate(),
+      hasta: (d['hasta'] as Timestamp?)?.toDate(),
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'nombre': nombre,
+        'regla': regla.name,
+        'valor': valor,
+        'objetivoCentavos': objetivoCentavos,
+        'desde': Timestamp.fromDate(desde),
+        'hasta': hasta == null ? null : Timestamp.fromDate(hasta!),
+      };
+}
+</file>
+
+<file path="mis_finanzas/lib/models/tarjeta.dart">
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+const bancos = [
+  'Banco Agrícola', 'Banco Cuscatlán', 'Davivienda', 'BAC Credomatic',
+  'Banco Promerica', 'Banco Hipotecario', 'Banco Industrial', 'Banco Azul',
+  'Otro',
+];
+
+class Tarjeta {
+  const Tarjeta({
+    this.id = '',
+    required this.banco,
+    this.alias = '',
+    required this.limiteMensualCentavos,
+    this.activa = true,
+    required this.creada,
+  });
+
+  final String id;
+  final String banco;
+  final String alias;
+
+  /// Presupuesto mensual de la tarjeta: se renueva el día 1 de cada mes.
+  final int limiteMensualCentavos;
+  final bool activa;
+  final DateTime creada;
+
+  String get bancoCorto => banco.replaceFirst('Banco ', '');
+  String get nombre => alias.trim().isEmpty ? bancoCorto : '$bancoCorto · ${alias.trim()}';
+
+  factory Tarjeta.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final d = doc.data()!;
+    return Tarjeta(
+      id: doc.id,
+      banco: d['banco'] as String? ?? 'Otro',
+      alias: d['alias'] as String? ?? '',
+      limiteMensualCentavos: (d['limiteMensualCentavos'] as num).toInt(),
+      activa: d['activa'] as bool? ?? true,
+      creada: (d['creada'] as Timestamp).toDate(),
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'banco': banco,
+        'alias': alias,
+        'limiteMensualCentavos': limiteMensualCentavos,
+        'activa': activa,
+        'creada': Timestamp.fromDate(creada),
+      };
+}
+</file>
+
+<file path="mis_finanzas/lib/screens/ahorro_page.dart">
+import 'package:flutter/material.dart';
+
+import '../models/estado_mascota.dart';
+import '../models/plan_ahorro.dart';
+import '../services/finanzas_repo.dart';
+import '../theme/paleta.dart';
+import '../utils/formato.dart';
+import '../widgets/glass_card.dart';
+import '../widgets/mascota.dart';
+import '../widgets/plan_form.dart';
+
+Future<bool> _confirmar(
+    BuildContext context, String titulo, String texto, String boton) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(titulo),
+      content: Text(texto),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(boton)),
+      ],
+    ),
+  );
+  return ok == true;
+}
+
+class AhorroPage extends StatelessWidget {
+  const AhorroPage({super.key, required this.repo});
+  final FinanzasRepo repo;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final total = repo.ahorroTotal;
+    final planes = repo.planes;
+
+    return SafeArea(
+      bottom: false,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
+            children: [
+              Row(children: [
+                Expanded(
+                  child: Text('Ahorro',
+                      style: tema.textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w800)),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => mostrarFormularioPlan(context, repo.planesSvc),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Nuevo plan'),
+                ),
+              ]),
+              const SizedBox(height: 12),
+              GlassCard(
+                acento: Paleta.lima,
+                child: Row(children: [
+                  Mascota(total > 0 ? EstadoMascota.hucha : EstadoMascota.escritorio,
+                      tamano: 110),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Total ahorrado',
+                          style: tema.textTheme.labelLarge
+                              ?.copyWith(color: tema.colorScheme.outline)),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(formatoUsd(total),
+                            style: tema.textTheme.displaySmall
+                                ?.copyWith(fontWeight: FontWeight.w800)),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('Está apartado: no cuenta en lo que puedes gastar.',
+                          style: tema.textTheme.bodySmall),
+                    ]),
+                  ),
+                ]),
+              ),
+              const SizedBox(height: 12),
+              if (planes.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                    'Aún no tienes planes. Crea uno y el cerdito empieza a apartar por ti.',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              for (final p in planes) ...[
+                _PlanCard(
+                  p: p,
+                  acumulado: repo.ahorroDe(p),
+                  onEditar: () => mostrarFormularioPlan(context, repo.planesSvc, inicial: p),
+                  onDetener: () async {
+                    if (await _confirmar(
+                        context,
+                        '¿Detener "${p.nombre}"?',
+                        'Dejará de acumular. Lo ahorrado hasta hoy se conserva.',
+                        'Detener')) {
+                      repo.planesSvc.detener(p.id);
+                    }
+                  },
+                  onEliminar: () async {
+                    if (await _confirmar(
+                        context,
+                        '¿Eliminar "${p.nombre}"?',
+                        'Se liberarán ${formatoUsd(repo.ahorroDe(p))} y volverán a tu dinero disponible.',
+                        'Eliminar')) {
+                      repo.planesSvc.eliminar(p.id);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlanCard extends StatelessWidget {
+  const _PlanCard({
+    required this.p,
+    required this.acumulado,
+    required this.onEditar,
+    required this.onDetener,
+    required this.onEliminar,
+  });
+  final PlanAhorro p;
+  final int acumulado;
+  final VoidCallback onEditar, onDetener, onEliminar;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final regla = p.regla == ReglaAhorro.porcentaje
+        ? '${p.valor} % de tus ingresos'
+        : '${formatoUsd(p.valor)} al mes';
+    final obj = p.objetivoCentavos;
+    final progreso = obj == null || obj <= 0
+        ? 0.0
+        : (acumulado / obj).clamp(0.0, 1.0).toDouble();
+
+    return GlassCard(
+      acento: p.activo ? Paleta.lima : null,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(p.nombre,
+                  style: tema.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Text('$regla · desde ${fechaMuyCorta(p.desde)}',
+                  style: tema.textTheme.bodySmall
+                      ?.copyWith(color: tema.colorScheme.outline)),
+            ]),
+          ),
+          if (!p.activo)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                  color: Colors.white10, borderRadius: BorderRadius.circular(8)),
+              child: Text('Detenido', style: tema.textTheme.labelSmall),
+            ),
+          PopupMenuButton<String>(
+            onSelected: (v) {
+              if (v == 'edit') onEditar();
+              if (v == 'stop') onDetener();
+              if (v == 'del') onEliminar();
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'edit', child: Text('Editar nombre y meta')),
+              if (p.activo) const PopupMenuItem(value: 'stop', child: Text('Detener plan')),
+              const PopupMenuItem(value: 'del', child: Text('Eliminar')),
+            ],
+          ),
+        ]),
+        const SizedBox(height: 8),
+        Text(formatoUsd(acumulado),
+            style: tema.textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.w800, color: Paleta.lima)),
+        if (obj != null) ...[
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+                value: progreso,
+                minHeight: 8,
+                color: Paleta.lima,
+                backgroundColor: Colors.white10),
+          ),
+          const SizedBox(height: 6),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text(acumulado >= obj ? '¡Meta alcanzada! 🎉' : '${(progreso * 100).round()} %',
+                style: tema.textTheme.bodySmall),
+            Text('Meta ${formatoUsd(obj)}', style: tema.textTheme.bodySmall),
+          ]),
+        ],
+      ]),
+    );
+  }
+}
+</file>
+
+<file path="mis_finanzas/lib/screens/tarjetas_page.dart">
+import 'package:flutter/material.dart';
+
+import '../models/tarjeta.dart';
+import '../services/finanzas_repo.dart';
+import '../theme/paleta.dart';
+import '../utils/formato.dart';
+import '../utils/presupuesto.dart';
+import '../widgets/glass_card.dart';
+import '../widgets/tarjeta_form.dart';
+
+Color colorTarjeta(String banco) {
+  const c = [
+    Paleta.esmeralda, Paleta.menta, Paleta.lima,
+    Color(0xFF5BC0FF), Color(0xFFB388FF), Color(0xFFFFB74D),
+  ];
+  final i = bancos.indexOf(banco);
+  return c[(i < 0 ? 0 : i) % c.length];
+}
+
+class TarjetasPage extends StatelessWidget {
+  const TarjetasPage({super.key, required this.repo});
+  final FinanzasRepo repo;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final estados = repo.estadosTarjetas;
+    final ahora = DateTime.now();
+    final renueva = DateTime(ahora.year, ahora.month + 1, 1);
+    final libre = repo.balanceEfectivo - repo.ahorroTotal;
+
+    return SafeArea(
+      bottom: false,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
+            children: [
+              Row(children: [
+                Expanded(
+                  child: Text('Tarjetas',
+                      style: tema.textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w800)),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => mostrarFormularioTarjeta(context, repo.tarjetasSvc),
+                  icon: const Icon(Icons.add_card),
+                  label: const Text('Agregar'),
+                ),
+              ]),
+              const SizedBox(height: 12),
+              GlassCard(
+                acento: Paleta.esmeralda,
+                child: Row(children: [
+                  const _Avatar(icono: Icons.payments_outlined, color: Paleta.esmeralda),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Efectivo', style: tema.textTheme.titleMedium),
+                      Text('No se reinicia cada mes',
+                          style: tema.textTheme.bodySmall
+                              ?.copyWith(color: tema.colorScheme.outline)),
+                    ]),
+                  ),
+                  Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                    Text(formatoUsd(repo.balanceEfectivo),
+                        style: tema.textTheme.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.w800)),
+                    Text('libre de ahorro: ${formatoUsd(libre)}',
+                        style: tema.textTheme.bodySmall
+                            ?.copyWith(color: tema.colorScheme.outline)),
+                  ]),
+                ]),
+              ),
+              const SizedBox(height: 12),
+              if (estados.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                    'Agrega tu primera tarjeta para llevar el presupuesto mensual de cada una.',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              for (final e in estados) ...[
+                _TarjetaCard(
+                  e: e,
+                  renueva: renueva,
+                  onTap: () => mostrarFormularioTarjeta(context, repo.tarjetasSvc,
+                      inicial: e.tarjeta),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (repo.archivadas.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text('Archivadas',
+                    style: tema.textTheme.labelLarge
+                        ?.copyWith(color: tema.colorScheme.outline)),
+                for (final t in repo.archivadas)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(t.nombre),
+                    trailing: TextButton(
+                      onPressed: () => repo.tarjetasSvc.archivar(t.id, activa: true),
+                      child: const Text('Reactivar'),
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TarjetaCard extends StatelessWidget {
+  const _TarjetaCard({required this.e, required this.renueva, required this.onTap});
+  final EstadoTarjeta e;
+  final DateTime renueva;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final c = e.tarjeta;
+    final color = colorTarjeta(c.banco);
+    final barra = e.uso > 1 ? Paleta.gasto : (e.uso > 0.8 ? Colors.amber : color);
+    return GlassCard(
+      acento: color,
+      onTap: onTap,
+      child: Column(children: [
+        Row(children: [
+          _Avatar(texto: c.bancoCorto.characters.first.toUpperCase(), color: color),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(c.nombre, style: tema.textTheme.titleMedium),
+              Text('Se renueva el ${fechaMuyCorta(renueva)}',
+                  style: tema.textTheme.bodySmall
+                      ?.copyWith(color: tema.colorScheme.outline)),
+            ]),
+          ),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Text(formatoUsd(e.restante),
+                style: tema.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: e.restante < 0 ? Paleta.gasto : null)),
+            Text('restante',
+                style: tema.textTheme.bodySmall
+                    ?.copyWith(color: tema.colorScheme.outline)),
+          ]),
+        ]),
+        const SizedBox(height: 14),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+              value: e.uso.clamp(0.0, 1.0).toDouble(),
+              minHeight: 8,
+              color: barra,
+              backgroundColor: Colors.white10),
+        ),
+        const SizedBox(height: 8),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text('Gastado ${formatoUsd(e.gastadoMes)}', style: tema.textTheme.bodySmall),
+          Text('Presupuesto ${formatoUsd(e.limite)}', style: tema.textTheme.bodySmall),
+        ]),
+      ]),
+    );
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  const _Avatar({this.icono, this.texto, required this.color});
+  final IconData? icono;
+  final String? texto;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        alignment: Alignment.center,
+        child: icono != null
+            ? Icon(icono, color: color)
+            : Text(texto ?? '',
+                style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 18)),
+      );
+}
+</file>
+
+<file path="mis_finanzas/lib/services/finanzas_repo.dart">
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+
+import '../models/plan_ahorro.dart';
+import '../models/tarjeta.dart';
+import '../models/transaccion.dart';
+import '../utils/presupuesto.dart';
+import 'planes_service.dart';
+import 'tarjetas_service.dart';
+import 'transacciones_service.dart';
+
+class FinanzasRepo extends ChangeNotifier {
+  FinanzasRepo(String uid)
+      : transacciones = TransaccionesService(uid),
+        tarjetasSvc = TarjetasService(uid),
+        planesSvc = PlanesService(uid) {
+    _subs = [
+      transacciones.observar().listen((v) {
+        _lote = v;
+        notifyListeners();
+      }, onError: _fallo),
+      tarjetasSvc.observar().listen((v) {
+        _tarjetas = v;
+        notifyListeners();
+      }, onError: _fallo),
+      planesSvc.observar().listen((v) {
+        _planes = v;
+        notifyListeners();
+      }, onError: _fallo),
+    ];
+  }
+
+  final TransaccionesService transacciones;
+  final TarjetasService tarjetasSvc;
+  final PlanesService planesSvc;
+  late final List<StreamSubscription<dynamic>> _subs;
+
+  LoteTransacciones? _lote;
+  List<Tarjeta>? _tarjetas;
+  List<PlanAhorro>? _planes;
+  Object? error;
+
+  void _fallo(Object e) {
+    error = e;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    for (final s in _subs) {
+      s.cancel();
+    }
+    super.dispose();
+  }
+
+  bool get listo => _lote != null && _tarjetas != null && _planes != null;
+  LoteTransacciones get lote => _lote!;
+  List<PlanAhorro> get planes => _planes!;
+  List<Tarjeta> get tarjetas => _tarjetas!.where((t) => t.activa).toList();
+  List<Tarjeta> get archivadas => _tarjetas!.where((t) => !t.activa).toList();
+
+  // ---- Derivados (datos chicos: se recalculan al leerlos) ----
+  int get balanceEfectivo => calcularBalanceEfectivo(lote.items);
+  List<EstadoTarjeta> get estadosTarjetas =>
+      estadoTarjetas(lote.items, tarjetas, DateTime.now());
+  int restanteTarjeta(String id) =>
+      estadosTarjetas.where((e) => e.tarjeta.id == id).map((e) => e.restante).firstOrNull ?? 0;
+  int ahorroDe(PlanAhorro p) => ahorroPlan(p, lote.items, DateTime.now());
+  int get ahorroTotal => planes.fold(0, (a, p) => a + ahorroDe(p));
+  PresupuestoSemanal get semana => calcularSemana(
+      movs: lote.items, tarjetas: tarjetas, planes: planes, ahora: DateTime.now());
+
+  String nombreCuenta(String id) {
+    if (id == cuentaEfectivo) return 'Efectivo';
+    return _tarjetas!.where((t) => t.id == id).firstOrNull?.nombre ??
+        'Tarjeta eliminada';
+  }
+}
+</file>
+
+<file path="mis_finanzas/lib/services/planes_service.dart">
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/plan_ahorro.dart';
+
+class PlanesService {
+  PlanesService(this.uid, {FirebaseFirestore? db})
+      : _db = db ?? FirebaseFirestore.instance;
+  final String uid;
+  final FirebaseFirestore _db;
+
+  CollectionReference<Map<String, dynamic>> get _col =>
+      _db.collection('users').doc(uid).collection('planesAhorro');
+
+  Stream<List<PlanAhorro>> observar() => _col
+      .orderBy('desde')
+      .snapshots()
+      .map((s) => s.docs.map(PlanAhorro.fromDoc).toList());
+
+  Future<void> guardar(PlanAhorro p) =>
+      (p.id.isEmpty ? _col.doc() : _col.doc(p.id)).set(p.toMap());
+
+  /// Deja de acumular; lo ya ahorrado se conserva.
+  Future<void> detener(String id) =>
+      _col.doc(id).update({'hasta': Timestamp.now()});
+
+  /// Borra el plan y libera lo acumulado al dinero disponible.
+  Future<void> eliminar(String id) => _col.doc(id).delete();
+}
+</file>
+
+<file path="mis_finanzas/lib/services/tarjetas_service.dart">
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/tarjeta.dart';
+
+class TarjetasService {
+  TarjetasService(this.uid, {FirebaseFirestore? db})
+      : _db = db ?? FirebaseFirestore.instance;
+  final String uid;
+  final FirebaseFirestore _db;
+
+  CollectionReference<Map<String, dynamic>> get _col =>
+      _db.collection('users').doc(uid).collection('tarjetas');
+
+  Stream<List<Tarjeta>> observar() => _col
+      .orderBy('creada')
+      .snapshots()
+      .map((s) => s.docs.map(Tarjeta.fromDoc).toList());
+
+  // Sin await en la UI: offline estos Future no se completan hasta sincronizar.
+  Future<void> guardar(Tarjeta t) =>
+      (t.id.isEmpty ? _col.doc() : _col.doc(t.id)).set(t.toMap());
+
+  Future<void> archivar(String id, {required bool activa}) =>
+      _col.doc(id).update({'activa': activa});
+}
+</file>
+
+<file path="mis_finanzas/lib/theme/paleta.dart">
+import 'package:flutter/material.dart';
+
+class Paleta {
+  static const lima = Color(0xFF98FA57);       // CTA
+  static const esmeralda = Color(0xFF57FA67);  // principal / activo
+  static const menta = Color(0xFF57FAB9);      // soporte / gradientes
+  static const fondo = Color(0xFF0B0F0D);
+  static const superficie = Color(0xFF121916);
+  static const gasto = Color(0xFFFF6B6B);
+  static const textoSuave = Color(0xFF9DB0A6);
+}
+</file>
+
+<file path="mis_finanzas/lib/theme/tema.dart">
+import 'package:flutter/material.dart';
+import 'paleta.dart';
+
+ThemeData construirTema() {
+  final scheme = ColorScheme.fromSeed(
+    seedColor: Paleta.esmeralda,
+    brightness: Brightness.dark,
+  ).copyWith(
+    primary: Paleta.esmeralda,
+    onPrimary: Colors.black,
+    secondary: Paleta.menta,
+    onSecondary: Colors.black,
+    tertiary: Paleta.lima,
+    onTertiary: Colors.black,
+    surface: Paleta.superficie,
+    onSurface: const Color(0xFFE8F2EC),
+    error: Paleta.gasto,
+    outline: Paleta.textoSuave,
+    outlineVariant: Colors.white12,
+    secondaryContainer: const Color(0xFF16322B),
+    onSecondaryContainer: Paleta.menta,
+  );
+
+  OutlineInputBorder borde(Color c, [double w = 1]) => OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: c, width: w),
+      );
+
+  return ThemeData(
+    useMaterial3: true,
+    colorScheme: scheme,
+    scaffoldBackgroundColor: Paleta.fondo,
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.white.withValues(alpha: 0.05),
+      border: borde(Colors.white12),
+      enabledBorder: borde(Colors.white12),
+      focusedBorder: borde(Paleta.esmeralda, 1.5),
+      errorBorder: borde(Paleta.gasto),
+      focusedErrorBorder: borde(Paleta.gasto, 1.5),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: Paleta.lima,
+        foregroundColor: Colors.black,
+        minimumSize: const Size(64, 52),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+      ),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: Paleta.fondo,
+      surfaceTintColor: Colors.transparent,
+      indicatorColor: Paleta.esmeralda.withValues(alpha: 0.18),
+    ),
+    navigationRailTheme: NavigationRailThemeData(
+      backgroundColor: Paleta.fondo,
+      indicatorColor: Paleta.esmeralda.withValues(alpha: 0.18),
+    ),
+    snackBarTheme: const SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: Color(0xFF1B2622),
+    ),
+    chipTheme: ChipThemeData(
+      showCheckmark: false,
+      side: const BorderSide(color: Colors.white12),
+      selectedColor: Paleta.esmeralda.withValues(alpha: 0.22),
+    ),
+  );
+}
+</file>
+
+<file path="mis_finanzas/lib/utils/analisis.dart">
+import '../models/estado_mascota.dart';
+import '../models/transaccion.dart';
+
+DateTime _restarMeses(DateTime d, int m) {
+  final total = d.year * 12 + (d.month - 1) - m;
+  final y = total ~/ 12;
+  final mes = total % 12 + 1;
+  final ultimo = DateTime(y, mes + 1, 0).day;
+  return DateTime(y, mes, d.day > ultimo ? ultimo : d.day);
+}
+
+int _dias(DateTime a, DateTime b) => DateTime.utc(b.year, b.month, b.day)
+    .difference(DateTime.utc(a.year, a.month, a.day))
+    .inDays;
+
+/// Ventana de tiempo: N días o N meses hacia atrás desde hoy.
+class Periodo {
+  const Periodo.dias(this.dias) : meses = 0;
+  const Periodo.meses(this.meses) : dias = 0;
+  final int dias;
+  final int meses;
+
+  String get etiqueta {
+    if (meses > 0) return meses == 1 ? '1 mes' : '$meses meses';
+    return dias == 7 ? '1 sem' : (dias == 14 ? '2 sem' : '$dias días');
+  }
+
+  DateTime inicio(DateTime hoy) {
+    if (meses > 0) {
+      final r = _restarMeses(hoy, meses);
+      return DateTime(r.year, r.month, r.day + 1);
+    }
+    return DateTime(hoy.year, hoy.month, hoy.day - (dias - 1));
+  }
+
+  DateTime inicioAnterior(DateTime inicio) => meses > 0
+      ? _restarMeses(inicio, meses)
+      : DateTime(inicio.year, inicio.month, inicio.day - dias);
+
+  @override
+  bool operator ==(Object o) => o is Periodo && o.dias == dias && o.meses == meses;
+  @override
+  int get hashCode => Object.hash(dias, meses);
+}
+
+class ResumenPeriodo {
+  const ResumenPeriodo({
+    required this.inicio,
+    required this.hoy,
+    required this.gastos,
+    required this.ingresos,
+    required this.gastosPrevios,
+    required this.serie,
+    required this.seriePrev,
+  });
+  final DateTime inicio, hoy;
+  final int gastos, ingresos, gastosPrevios;
+  final List<int> serie, seriePrev;
+
+  /// +0.25 = los gastos subieron 25 % frente al periodo anterior.
+  double? get variacion =>
+      gastosPrevios == 0 ? null : (gastos - gastosPrevios) / gastosPrevios;
+}
+
+ResumenPeriodo analizar(List<Transaccion> movs, Periodo p, DateTime ahora) {
+  final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+  final finExcl = DateTime(hoy.year, hoy.month, hoy.day + 1);
+  final inicio = p.inicio(hoy);
+  final inicioPrev = p.inicioAnterior(inicio);
+  final totalDias = _dias(inicio, finExcl);
+  final bucket = totalDias <= 31 ? 1 : 7;
+  final n = (totalDias / bucket).ceil();
+
+  final serie = List<int>.filled(n, 0);
+  final prev = List<int>.filled(n, 0);
+  var gastos = 0, ingresos = 0, gastosPrev = 0;
+
+  for (final t in movs) {
+    final dia = DateTime(t.fecha.year, t.fecha.month, t.fecha.day);
+    final enActual = !dia.isBefore(inicio) && dia.isBefore(finExcl);
+    final enPrev = !dia.isBefore(inicioPrev) && dia.isBefore(inicio);
+    if (enActual) {
+      if (t.tipo == TipoTransaccion.gasto) {
+        gastos += t.montoCentavos;
+        serie[_dias(inicio, dia) ~/ bucket] += t.montoCentavos;
+      } else {
+        ingresos += t.montoCentavos;
+      }
+    } else if (enPrev && t.tipo == TipoTransaccion.gasto) {
+      gastosPrev += t.montoCentavos;
+      final i = _dias(inicioPrev, dia) ~/ bucket;
+      if (i < n) prev[i] += t.montoCentavos;
+    }
+  }
+
+  return ResumenPeriodo(
+    inicio: inicio, hoy: hoy, gastos: gastos, ingresos: ingresos,
+    gastosPrevios: gastosPrev, serie: serie, seriePrev: prev,
+  );
+}
+
+enum Tono { positivo, neutro, alerta }
+
+class Lectura {
+  const Lectura(this.estado, this.mensaje, this.tono);
+  final EstadoMascota estado;
+  final String mensaje;
+  final Tono tono;
+}
+
+/// Qué cara pone el cerdito según el periodo seleccionado.
+Lectura evaluarMascota({
+  required int balance,
+  required ResumenPeriodo r,
+  required bool hayDatos,
+}) {
+  if (!hayDatos) {
+    return const Lectura(EstadoMascota.escritorio,
+        'Registra tu primer movimiento y arrancamos.', Tono.neutro);
+  }
+  if (balance < 0) {
+    return const Lectura(EstadoMascota.panico,
+        'Tu balance está en negativo. ¡Hay que frenar!', Tono.alerta);
+  }
+  final v = r.variacion;
+  if (r.ingresos > 0 && r.gastos > r.ingresos) {
+    return const Lectura(EstadoMascota.sudando,
+        'Gastaste más de lo que ingresó en este periodo.', Tono.alerta);
+  }
+  if (v != null && v > 0.25) {
+    return Lectura(EstadoMascota.preocupado,
+        'Tus gastos subieron ${(v * 100).round()} % frente al periodo anterior.',
+        Tono.alerta);
+  }
+  if (r.ingresos > 0) {
+    final tasa = (r.ingresos - r.gastos) / r.ingresos;
+    if (tasa >= 0.5) {
+      return const Lectura(EstadoMascota.celebra,
+          'Ahorras más de la mitad de lo que ganas. ¡Brutal!', Tono.positivo);
+    }
+    if (tasa >= 0.3) {
+      return const Lectura(EstadoMascota.meta,
+          'Vas rumbo a tu meta de ahorro.', Tono.positivo);
+    }
+  }
+  if (v != null && v <= -0.10) {
+    return Lectura(EstadoMascota.ahorro,
+        'Tus gastos bajaron ${(-v * 100).round()} %. Buen control.', Tono.positivo);
+  }
+  if (r.ingresos > r.gastos) {
+    return const Lectura(EstadoMascota.hucha,
+        'Tus ingresos van por encima de tus gastos.', Tono.positivo);
+  }
+  return const Lectura(EstadoMascota.escritorio,
+      'Todo bajo control. Sigo supervisando.', Tono.neutro);
+}
+
+/// Reacción en vivo mientras se escribe el monto en el formulario.
+Lectura reaccionAlMonto({
+  required TipoTransaccion tipo,
+  required int centavos,
+  required int balance,
+}) {
+  if (tipo == TipoTransaccion.ingreso) {
+    if (centavos > 0 && balance > 0 && centavos >= balance * 0.5) {
+      return const Lectura(EstadoMascota.celebra, '¡Entrada grande!', Tono.positivo);
+    }
+    return const Lectura(EstadoMascota.bolsa, 'Entra dinero. ¡Buen movimiento!', Tono.positivo);
+  }
+  if (centavos == 0) {
+    return const Lectura(EstadoMascota.escritorio, 'Anota el gasto, yo superviso.', Tono.neutro);
+  }
+  if (balance <= 0 || centavos > balance) {
+    return const Lectura(EstadoMascota.panico, '¡Eso supera tu balance!', Tono.alerta);
+  }
+  if (centavos >= balance * 0.3) {
+    return const Lectura(EstadoMascota.sudando, 'Salida fuerte… ¿seguro?', Tono.alerta);
+  }
+  if (centavos >= balance * 0.1) {
+    return const Lectura(EstadoMascota.preocupado, 'Es un gasto considerable.', Tono.alerta);
+  }
+  return const Lectura(EstadoMascota.escritorio, 'Gasto controlado.', Tono.neutro);
+}
+</file>
+
+<file path="mis_finanzas/lib/utils/presupuesto.dart">
+import 'dart:math' as math;
+
+import '../models/plan_ahorro.dart';
+import '../models/tarjeta.dart';
+import '../models/transaccion.dart';
+
+DateTime _dia(DateTime d) => DateTime(d.year, d.month, d.day);
+
+/// Efectivo real: ingresos − gastos hechos en efectivo (los de tarjeta no cuentan).
+int calcularBalanceEfectivo(List<Transaccion> movs) => movs
+    .where((t) => t.afectaEfectivo)
+    .fold(0, (a, t) => a + t.centavosConSigno);
+
+class EstadoTarjeta {
+  const EstadoTarjeta(this.tarjeta, this.gastadoMes);
+  final Tarjeta tarjeta;
+  final int gastadoMes;
+
+  int get limite => tarjeta.limiteMensualCentavos;
+  int get restante => limite - gastadoMes;
+  double get uso => limite <= 0 ? (gastadoMes > 0 ? 1 : 0) : gastadoMes / limite;
+}
+
+/// Gasto de cada tarjeta SOLO en el mes calendario actual (se reinicia el día 1).
+List<EstadoTarjeta> estadoTarjetas(
+    List<Transaccion> movs, List<Tarjeta> tarjetas, DateTime ahora) {
+  final ini = DateTime(ahora.year, ahora.month);
+  final fin = DateTime(ahora.year, ahora.month + 1);
+  final porTarjeta = <String, int>{};
+  for (final t in movs) {
+    if (t.tipo != TipoTransaccion.gasto || t.afectaEfectivo) continue;
+    if (t.fecha.isBefore(ini) || !t.fecha.isBefore(fin)) continue;
+    porTarjeta[t.cuentaId] = (porTarjeta[t.cuentaId] ?? 0) + t.montoCentavos;
+  }
+  return [for (final c in tarjetas) EstadoTarjeta(c, porTarjeta[c.id] ?? 0)];
+}
+
+/// Lo acumulado por un plan desde [PlanAhorro.desde] hasta hoy (o hasta que se detuvo).
+int ahorroPlan(PlanAhorro p, List<Transaccion> movs, DateTime ahora) {
+  final fin = _dia(p.hasta ?? ahora);
+  final ini = _dia(p.desde);
+  if (p.regla == ReglaAhorro.porcentaje) {
+    var base = 0;
+    for (final t in movs) {
+      if (t.tipo != TipoTransaccion.ingreso) continue;
+      final d = _dia(t.fecha);
+      if (d.isBefore(ini) || d.isAfter(fin)) continue;
+      base += t.montoCentavos;
+    }
+    return (base * p.valor + 50) ~/ 100;
+  }
+  // Monto fijo: se aparta al inicio de cada mes, incluido el mes de creación.
+  final meses = (fin.year * 12 + fin.month) - (ini.year * 12 + ini.month) + 1;
+  return meses < 0 ? 0 : meses * p.valor;
+}
+
+class PresupuestoSemanal {
+  const PresupuestoSemanal({
+    required this.inicio,
+    required this.fin,
+    required this.disponible,
+    required this.gastado,
+    required this.asignacion,
+    required this.semanasRestantes,
+    required this.efectivoLibre,
+    required this.tarjetasRestante,
+    required this.ahorroApartado,
+  });
+  final DateTime inicio, fin; // lunes a domingo
+  final int disponible, gastado, asignacion, semanasRestantes;
+  final int efectivoLibre, tarjetasRestante, ahorroApartado;
+
+  /// Lo que aún puedes gastar esta semana (negativo = te pasaste).
+  int get quedan => asignacion - gastado;
+  double get progreso => asignacion <= 0
+      ? (gastado > 0 ? 1.0 : 0.0)
+      : (gastado / asignacion).clamp(0.0, 1.0).toDouble();
+}
+
+PresupuestoSemanal calcularSemana({
+  required List<Transaccion> movs,
+  required List<Tarjeta> tarjetas, // solo activas
+  required List<PlanAhorro> planes,
+  required DateTime ahora,
+}) {
+  final hoy = _dia(ahora);
+  final inicio = DateTime(hoy.year, hoy.month, hoy.day - (hoy.weekday - 1));
+  final fin = DateTime(inicio.year, inicio.month, inicio.day + 6);
+  final inicioMes = DateTime(hoy.year, hoy.month);
+  final finMes = DateTime(hoy.year, hoy.month + 1);
+  final ids = {for (final t in tarjetas) t.id};
+
+  final efectivo = calcularBalanceEfectivo(movs);
+  final ahorro = planes.fold<int>(0, (a, p) => a + ahorroPlan(p, movs, ahora));
+  final tarjetasRestante = estadoTarjetas(movs, tarjetas, ahora)
+      .fold<int>(0, (a, e) => a + e.restante);
+
+  // Gasto de la semana que ya está descontado del disponible actual.
+  var gastado = 0;
+  for (final t in movs) {
+    if (t.tipo != TipoTransaccion.gasto) continue;
+    final d = _dia(t.fecha);
+    if (d.isBefore(inicio) || d.isAfter(fin)) continue;
+    final enMes = !d.isBefore(inicioMes) && d.isBefore(finMes);
+    if (t.afectaEfectivo || (ids.contains(t.cuentaId) && enMes)) {
+      gastado += t.montoCentavos;
+    }
+  }
+
+  // Semana actual + lunes que aún caen dentro del mes.
+  var semanas = 1;
+  for (var d = DateTime(hoy.year, hoy.month, hoy.day + 1);
+      d.isBefore(finMes);
+      d = DateTime(d.year, d.month, d.day + 1)) {
+    if (d.weekday == DateTime.monday) semanas++;
+  }
+
+  final disponible = efectivo - ahorro + tarjetasRestante;
+  final asignacion = math.max(0, (disponible + gastado) ~/ semanas);
+
+  return PresupuestoSemanal(
+    inicio: inicio,
+    fin: fin,
+    disponible: disponible,
+    gastado: gastado,
+    asignacion: asignacion,
+    semanasRestantes: semanas,
+    efectivoLibre: efectivo - ahorro,
+    tarjetasRestante: tarjetasRestante,
+    ahorroApartado: ahorro,
+  );
+}
+</file>
+
+<file path="mis_finanzas/lib/widgets/acciones_transaccion.dart">
+import 'package:flutter/material.dart';
+import '../models/transaccion.dart';
+import '../services/transacciones_service.dart';
+import '../utils/formato.dart';
+
+/// [confirmar] = true para el botón de la papelera; el deslizar ya es intencional
+/// y se cubre con "Deshacer".
+Future<void> eliminarTransaccion(
+  BuildContext context,
+  TransaccionesService service,
+  Transaccion t, {
+  required bool confirmar,
+}) async {
+  if (confirmar) {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Eliminar movimiento?'),
+        content: Text(
+            '${t.descripcion.isEmpty ? t.categoria : t.descripcion} · ${formatoUsd(t.montoCentavos)}'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Eliminar')),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+  }
+  service.eliminar(t.id); // sin await: funciona igual offline
+  ScaffoldMessenger.of(context)
+    ..clearSnackBars()
+    ..showSnackBar(SnackBar(
+      content: const Text('Movimiento eliminado'),
+      action: SnackBarAction(
+          label: 'Deshacer', onPressed: () => service.agregar(t)),
+    ));
+}
+</file>
+
+<file path="mis_finanzas/lib/widgets/glass_card.dart">
+import 'dart:ui';
+import 'package:flutter/material.dart';
+
+class GlassCard extends StatelessWidget {
+  const GlassCard({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+    this.acento,
+    this.blur = false,
+    this.onTap,
+  });
+  final Widget child;
+  final EdgeInsets padding;
+  final Color? acento;
+  final bool blur; // BackdropFilter es costoso: úsalo solo donde haya algo detrás.
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final radio = BorderRadius.circular(24);
+    Widget w = Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        borderRadius: radio,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            (acento ?? Colors.white).withValues(alpha: acento == null ? 0.08 : 0.14),
+            Colors.white.withValues(alpha: 0.03),
+          ],
+        ),
+        border: Border.all(
+          color: (acento ?? Colors.white).withValues(alpha: acento == null ? 0.10 : 0.35),
+        ),
+      ),
+      child: child,
+    );
+    if (blur) {
+      w = ClipRRect(
+        borderRadius: radio,
+        child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16), child: w),
+      );
+    }
+    if (onTap != null) {
+      w = Material(
+        color: Colors.transparent,
+        child: InkWell(borderRadius: radio, onTap: onTap, child: w),
+      );
+    }
+    return w;
+  }
+}
+</file>
+
+<file path="mis_finanzas/lib/widgets/grafica_gastos.dart">
+import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import '../theme/paleta.dart';
+
+class GraficaGastos extends StatelessWidget {
+  const GraficaGastos(
+      {super.key, required this.serie, required this.seriePrev, this.alto = 170});
+  final List<int> serie, seriePrev;
+  final double alto;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: alto,
+        width: double.infinity,
+        child: CustomPaint(painter: _Painter(serie, seriePrev)),
+      );
+}
+
+class _Painter extends CustomPainter {
+  _Painter(this.serie, this.prev);
+  final List<int> serie, prev;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (serie.isEmpty) return;
+    final w = size.width, h = size.height;
+    const pad = 14.0;
+    final maxV = [...serie, ...prev, 1].reduce(math.max);
+
+    Offset punto(List<int> s, int i) {
+      final x = s.length == 1 ? w / 2 : w * i / (s.length - 1);
+      final y = h - pad - (s[i] / maxV) * (h - pad * 2);
+      return Offset(x, y);
+    }
+
+    Path trazo(List<int> s) {
+      final p = Path();
+      var a = punto(s, 0);
+      p.moveTo(a.dx, a.dy);
+      for (var i = 1; i < s.length; i++) {
+        final b = punto(s, i);
+        final mx = (a.dx + b.dx) / 2;
+        p.cubicTo(mx, a.dy, mx, b.dy, b.dx, b.dy);
+        a = b;
+      }
+      return p;
+    }
+
+    final grilla = Paint()
+      ..color = Colors.white.withValues(alpha: 0.06)
+      ..strokeWidth = 1;
+    for (var i = 0; i < 4; i++) {
+      final y = pad + (h - pad * 2) * i / 3;
+      canvas.drawLine(Offset(0, y), Offset(w, y), grilla);
+    }
+
+    // Periodo anterior (punteado)
+    if (prev.length > 1 && prev.any((v) => v > 0)) {
+      final pp = Paint()
+        ..color = Colors.white.withValues(alpha: 0.35)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      for (final m in trazo(prev).computeMetrics()) {
+        for (var d = 0.0; d < m.length; d += 11) {
+          canvas.drawPath(m.extractPath(d, d + 5), pp);
+        }
+      }
+    }
+
+    final rect = Rect.fromLTWH(0, 0, w, h);
+    final ultimo = punto(serie, serie.length - 1);
+
+    if (serie.length > 1) {
+      final linea = trazo(serie);
+      final area = Path.from(linea)
+        ..lineTo(ultimo.dx, h)
+        ..lineTo(punto(serie, 0).dx, h)
+        ..close();
+      canvas.drawPath(
+        area,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Paleta.menta.withValues(alpha: 0.35),
+              Paleta.menta.withValues(alpha: 0),
+            ],
+          ).createShader(rect),
+      );
+      canvas.drawPath(
+        linea,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..shader = const LinearGradient(
+                  colors: [Paleta.lima, Paleta.esmeralda, Paleta.menta])
+              .createShader(rect),
+      );
+    }
+
+    canvas.drawCircle(ultimo, 10, Paint()..color = Paleta.esmeralda.withValues(alpha: 0.25));
+    canvas.drawCircle(ultimo, 5, Paint()..color = Paleta.esmeralda);
+  }
+
+  @override
+  bool shouldRepaint(_Painter o) =>
+      !listEquals(o.serie, serie) || !listEquals(o.prev, prev);
+}
+</file>
+
+<file path="mis_finanzas/lib/widgets/mascota.dart">
+import 'package:flutter/material.dart';
+import '../models/estado_mascota.dart';
+import '../theme/paleta.dart';
+
+class Mascota extends StatelessWidget {
+  const Mascota(this.estado, {super.key, this.tamano = 140});
+  final EstadoMascota estado;
+  final double tamano;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 350),
+      transitionBuilder: (child, anim) => FadeTransition(
+        opacity: anim,
+        child: ScaleTransition(
+            scale: Tween(begin: 0.85, end: 1.0).animate(anim), child: child),
+      ),
+      child: Image.asset(
+        estado.asset,
+        key: ValueKey(estado),
+        width: tamano,
+        height: tamano,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => SizedBox(
+          width: tamano,
+          height: tamano,
+          child: Icon(Icons.savings_rounded,
+              size: tamano * 0.6, color: Paleta.esmeralda),
+        ),
+      ),
+    );
+  }
+}
+</file>
+
+<file path="mis_finanzas/lib/widgets/plan_form.dart">
+import 'package:flutter/material.dart';
+import '../models/plan_ahorro.dart';
+import '../services/planes_service.dart';
+import '../utils/formato.dart';
+
+Future<void> mostrarFormularioPlan(BuildContext context, PlanesService svc,
+    {PlanAhorro? inicial}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: true,
+    constraints: const BoxConstraints(maxWidth: 520),
+    builder: (_) => _FormPlan(svc: svc, inicial: inicial),
+  );
+}
+
+class _FormPlan extends StatefulWidget {
+  const _FormPlan({required this.svc, this.inicial});
+  final PlanesService svc;
+  final PlanAhorro? inicial;
+  @override
+  State<_FormPlan> createState() => _FormPlanState();
+}
+
+class _FormPlanState extends State<_FormPlan> {
+  final _formKey = GlobalKey<FormState>();
+  late ReglaAhorro _regla = widget.inicial?.regla ?? ReglaAhorro.porcentaje;
+  late final _nombre = TextEditingController(text: widget.inicial?.nombre ?? '');
+  late final _valor = TextEditingController(text: _valorInicial());
+  late final _objetivo = TextEditingController(
+      text: widget.inicial?.objetivoCentavos == null
+          ? ''
+          : (widget.inicial!.objetivoCentavos! / 100).toStringAsFixed(2));
+
+  bool get _editando => widget.inicial != null;
+
+  String _valorInicial() {
+    final p = widget.inicial;
+    if (p == null) return '';
+    return p.regla == ReglaAhorro.porcentaje
+        ? '${p.valor}'
+        : (p.valor / 100).toStringAsFixed(2);
+  }
+
+  @override
+  void dispose() {
+    _nombre.dispose();
+    _valor.dispose();
+    _objetivo.dispose();
+    super.dispose();
+  }
+
+  void _guardar() {
+    if (!_formKey.currentState!.validate()) return;
+    final base = widget.inicial;
+    final ahora = DateTime.now();
+    final valor = _editando
+        ? base!.valor
+        : (_regla == ReglaAhorro.porcentaje
+            ? int.parse(_valor.text.trim())
+            : parseCentavos(_valor.text)!);
+    widget.svc.guardar(PlanAhorro(
+      id: base?.id ?? '',
+      nombre: _nombre.text.trim(),
+      regla: _regla,
+      valor: valor,
+      objetivoCentavos:
+          _objetivo.text.trim().isEmpty ? null : parseCentavos(_objetivo.text),
+      desde: base?.desde ?? DateTime(ahora.year, ahora.month, 1),
+      hasta: base?.hasta,
+    ));
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final porcentaje = _regla == ReglaAhorro.porcentaje;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(_editando ? 'Editar plan' : 'Nuevo plan de ahorro',
+                  style: tema.textTheme.titleLarge),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _nombre,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                    labelText: 'Nombre', hintText: 'Ej. Viaje, Emergencias'),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Ponle un nombre'
+                    : (v.trim().length > 60 ? 'Máximo 60 caracteres' : null),
+              ),
+              const SizedBox(height: 16),
+              SegmentedButton<ReglaAhorro>(
+                segments: const [
+                  ButtonSegment(
+                      value: ReglaAhorro.porcentaje,
+                      label: Text('% de ingresos'),
+                      icon: Icon(Icons.percent)),
+                  ButtonSegment(
+                      value: ReglaAhorro.montoFijo,
+                      label: Text('Monto fijo'),
+                      icon: Icon(Icons.attach_money)),
+                ],
+                selected: {_regla},
+                onSelectionChanged: _editando
+                    ? null
+                    : (s) => setState(() {
+                          _regla = s.first;
+                          _valor.clear();
+                        }),
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _valor,
+                enabled: !_editando,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: porcentaje ? 'Porcentaje de cada ingreso' : 'Monto por mes',
+                  prefixText: porcentaje ? null : r'$ ',
+                  suffixText: porcentaje ? '%' : null,
+                  helperText: _editando
+                      ? 'La regla no se edita. Detén el plan y crea otro para cambiarla.'
+                      : (porcentaje
+                          ? 'Se aparta de cada ingreso desde el 1 de este mes.'
+                          : 'Se aparta al inicio de cada mes, incluido este.'),
+                  helperMaxLines: 2,
+                ),
+                validator: (v) {
+                  if (_editando) return null;
+                  if (porcentaje) {
+                    final n = int.tryParse((v ?? '').trim());
+                    if (n == null || n < 1 || n > 100) return 'Entre 1 y 100';
+                    return null;
+                  }
+                  final c = parseCentavos(v ?? '');
+                  if (c == null) return 'Monto inválido';
+                  if (c <= 0) return 'Debe ser mayor a 0';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _objetivo,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Meta total (opcional)',
+                  prefixText: r'$ ',
+                  helperText: 'Para ver tu progreso, ej. \$1,200 para un viaje.',
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return null;
+                  final c = parseCentavos(v);
+                  return (c == null || c <= 0) ? 'Monto inválido' : null;
+                },
+              ),
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: _guardar,
+                icon: const Icon(Icons.check),
+                label: Text(_editando ? 'Guardar cambios' : 'Crear plan'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+</file>
+
+<file path="mis_finanzas/lib/widgets/semana_card.dart">
+import 'package:flutter/material.dart';
+import '../theme/paleta.dart';
+import '../utils/formato.dart';
+import '../utils/presupuesto.dart';
+import 'glass_card.dart';
+
+class SemanaCard extends StatelessWidget {
+  const SemanaCard({super.key, required this.s});
+  final PresupuestoSemanal s;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    if (s.asignacion == 0 && s.gastado == 0) {
+      return const GlassCard(
+        child: Row(children: [
+          Icon(Icons.event_available_outlined),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+                'Registra un ingreso o una tarjeta para calcular cuánto puedes gastar esta semana.'),
+          ),
+        ]),
+      );
+    }
+    final exceso = s.quedan < 0;
+    final color =
+        exceso ? Paleta.gasto : (s.progreso > 0.8 ? Colors.amber : Paleta.esmeralda);
+
+    return GlassCard(
+      acento: color,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Text('Esta semana', style: tema.textTheme.titleMedium),
+          const Spacer(),
+          Text('${fechaMuyCorta(s.inicio)} – ${fechaMuyCorta(s.fin)}',
+              style: tema.textTheme.bodySmall
+                  ?.copyWith(color: tema.colorScheme.outline)),
+        ]),
+        const SizedBox(height: 8),
+        Text(exceso ? 'Te pasaste por' : 'Aún puedes gastar',
+            style: tema.textTheme.bodySmall
+                ?.copyWith(color: tema.colorScheme.outline)),
+        Text(formatoUsd(exceso ? -s.quedan : s.quedan),
+            style: tema.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: exceso ? Paleta.gasto : null)),
+        const SizedBox(height: 12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+              value: s.progreso,
+              minHeight: 10,
+              color: color,
+              backgroundColor: Colors.white10),
+        ),
+        const SizedBox(height: 8),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text('Gastado ${formatoUsd(s.gastado)}', style: tema.textTheme.bodySmall),
+          Text('de ${formatoUsd(s.asignacion)}', style: tema.textTheme.bodySmall),
+        ]),
+        const Divider(height: 24, color: Colors.white12),
+        Wrap(spacing: 20, runSpacing: 8, children: [
+          _Dato('Efectivo libre', formatoUsd(s.efectivoLibre)),
+          _Dato('Tarjetas (mes)', formatoUsd(s.tarjetasRestante)),
+          _Dato('Ahorro apartado', formatoUsd(s.ahorroApartado)),
+        ]),
+        const SizedBox(height: 8),
+        Text(
+          'Se reparte entre ${s.semanasRestantes} ${s.semanasRestantes == 1 ? 'semana' : 'semanas'} que quedan del mes.',
+          style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.outline),
+        ),
+      ]),
+    );
+  }
+}
+
+class _Dato extends StatelessWidget {
+  const _Dato(this.etiqueta, this.valor);
+  final String etiqueta, valor;
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(etiqueta,
+          style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.outline)),
+      Text(valor,
+          style: tema.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+    ]);
+  }
+}
+</file>
+
+<file path="mis_finanzas/lib/widgets/sync_chip.dart">
+import 'package:flutter/material.dart';
+import '../services/transacciones_service.dart';
+import '../theme/paleta.dart';
+
+class SyncChip extends StatelessWidget {
+  const SyncChip({super.key, required this.lote});
+  final LoteTransacciones lote;
+
+  @override
+  Widget build(BuildContext context) {
+    IconData icono;
+    String texto;
+    Color color;
+    if (lote.pendientes) {
+      icono = Icons.cloud_upload_outlined;
+      texto = 'Sincronizando…';
+      color = Colors.amber;
+    } else if (lote.desdeCache) {
+      icono = Icons.cloud_off_outlined;
+      texto = 'Sin conexión';
+      color = Colors.orangeAccent;
+    } else {
+      icono = Icons.cloud_done_outlined;
+      texto = 'Sincronizado';
+      color = Paleta.esmeralda;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icono, size: 14, color: color),
+        const SizedBox(width: 6),
+        Text(texto,
+            style: TextStyle(
+                fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+      ]),
+    );
+  }
+}
+</file>
+
+<file path="mis_finanzas/lib/widgets/tarjeta_form.dart">
+import 'package:flutter/material.dart';
+import '../models/tarjeta.dart';
+import '../services/tarjetas_service.dart';
+import '../utils/formato.dart';
+
+Future<void> mostrarFormularioTarjeta(BuildContext context, TarjetasService svc,
+    {Tarjeta? inicial}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: true,
+    constraints: const BoxConstraints(maxWidth: 520),
+    builder: (_) => _FormTarjeta(svc: svc, inicial: inicial),
+  );
+}
+
+class _FormTarjeta extends StatefulWidget {
+  const _FormTarjeta({required this.svc, this.inicial});
+  final TarjetasService svc;
+  final Tarjeta? inicial;
+  @override
+  State<_FormTarjeta> createState() => _FormTarjetaState();
+}
+
+class _FormTarjetaState extends State<_FormTarjeta> {
+  final _formKey = GlobalKey<FormState>();
+  late String _banco = widget.inicial?.banco ?? bancos.first;
+  late final _alias = TextEditingController(text: widget.inicial?.alias ?? '');
+  late final _limite = TextEditingController(
+      text: widget.inicial == null
+          ? ''
+          : (widget.inicial!.limiteMensualCentavos / 100).toStringAsFixed(2));
+
+  @override
+  void dispose() {
+    _alias.dispose();
+    _limite.dispose();
+    super.dispose();
+  }
+
+  void _guardar() {
+    if (!_formKey.currentState!.validate()) return;
+    final base = widget.inicial;
+    widget.svc.guardar(Tarjeta(
+      id: base?.id ?? '',
+      banco: _banco,
+      alias: _alias.text.trim(),
+      limiteMensualCentavos: parseCentavos(_limite.text)!,
+      activa: base?.activa ?? true,
+      creada: base?.creada ?? DateTime.now(),
+    ));
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final editando = widget.inicial != null;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(editando ? 'Editar tarjeta' : 'Nueva tarjeta',
+                  style: tema.textTheme.titleLarge),
+              const SizedBox(height: 16),
+              Wrap(spacing: 8, runSpacing: 4, children: [
+                for (final b in bancos)
+                  ChoiceChip(
+                    label: Text(b),
+                    selected: _banco == b,
+                    onSelected: (_) => setState(() => _banco = b),
+                  ),
+              ]),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _alias,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                    labelText: 'Alias (opcional)', hintText: 'Ej. Visa Oro'),
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _limite,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Presupuesto mensual',
+                  prefixText: r'$ ',
+                  helperText: 'Se renueva solo el día 1 de cada mes.',
+                ),
+                validator: (v) {
+                  final c = parseCentavos(v ?? '');
+                  if (c == null) return 'Monto inválido';
+                  if (c <= 0) return 'Debe ser mayor a 0';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: _guardar,
+                icon: const Icon(Icons.check),
+                label: Text(editando ? 'Guardar cambios' : 'Agregar tarjeta'),
+              ),
+              if (editando)
+                TextButton.icon(
+                  onPressed: () {
+                    widget.svc.archivar(widget.inicial!.id, activa: false);
+                    Navigator.of(context).pop();
+                  },
+                  icon: const Icon(Icons.archive_outlined),
+                  label: const Text('Archivar tarjeta'),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+</file>
+
+<file path="mis_finanzas/test/analisis_test.dart">
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mis_finanzas/models/estado_mascota.dart';
+import 'package:mis_finanzas/models/transaccion.dart';
+import 'package:mis_finanzas/utils/analisis.dart';
+
+Transaccion g(int c, DateTime f) => Transaccion(
+    montoCentavos: c, tipo: TipoTransaccion.gasto, categoria: 'Comida', fecha: f);
+Transaccion i(int c, DateTime f) => Transaccion(
+    montoCentavos: c, tipo: TipoTransaccion.ingreso, categoria: 'Salario', fecha: f);
+
+void main() {
+  final ahora = DateTime(2026, 11, 10);
+
+  test('separa periodo actual y anterior (7 días)', () {
+    final r = analizar([
+      g(1000, DateTime(2026, 11, 10)),
+      g(200, DateTime(2026, 11, 4)),
+      g(500, DateTime(2026, 11, 3)), // periodo anterior
+      g(999, DateTime(2026, 10, 27)), // fuera de ambos
+    ], const Periodo.dias(7), ahora);
+    expect(r.gastos, 1200);
+    expect(r.gastosPrevios, 500);
+    expect(r.serie.length, 7);
+    expect(r.serie.first, 200);
+    expect(r.serie.last, 1000);
+    expect(r.variacion, closeTo(1.4, 1e-9));
+  });
+
+  test('variación es null sin periodo previo', () {
+    final r = analizar([g(100, ahora)], const Periodo.dias(7), ahora);
+    expect(r.variacion, isNull);
+  });
+
+  test('mascota: balance negativo es pánico', () {
+    final r = analizar([g(100, ahora)], const Periodo.dias(7), ahora);
+    expect(evaluarMascota(balance: -1, r: r, hayDatos: true).estado,
+        EstadoMascota.panico);
+  });
+
+  test('mascota: gasta más de lo que ingresa suda', () {
+    final r = analizar(
+        [i(1000, ahora), g(5000, ahora)], const Periodo.dias(7), ahora);
+    expect(evaluarMascota(balance: 3000, r: r, hayDatos: true).estado,
+        EstadoMascota.sudando);
+  });
+
+  test('mascota: ahorra el 90 % celebra', () {
+    final r = analizar([
+      i(100000, DateTime(2026, 11, 5)),
+      g(10000, DateTime(2026, 11, 6)),
+    ], const Periodo.dias(7), ahora);
+    expect(evaluarMascota(balance: 90000, r: r, hayDatos: true).estado,
+        EstadoMascota.celebra);
+  });
+
+  test('reacción al monto: gasto enorme alarma', () {
+    expect(
+        reaccionAlMonto(tipo: TipoTransaccion.gasto, centavos: 9000, balance: 10000)
+            .estado,
+        EstadoMascota.sudando);
+  });
+}
+</file>
+
+<file path="mis_finanzas/.metadata">
+# This file tracks properties of this Flutter project.
+# Used by Flutter tool to assess capabilities and perform upgrades etc.
+#
+# This file should be version controlled and should not be manually edited.
+
+version:
+  revision: "d3b14c876900e553bc736ca19295fc09e3853e8e"
+  channel: "stable"
+
+project_type: app
+
+# Tracks metadata for the flutter migrate command
+migration:
+  platforms:
+    - platform: root
+      create_revision: d3b14c876900e553bc736ca19295fc09e3853e8e
+      base_revision: d3b14c876900e553bc736ca19295fc09e3853e8e
+    - platform: web
+      create_revision: d3b14c876900e553bc736ca19295fc09e3853e8e
+      base_revision: d3b14c876900e553bc736ca19295fc09e3853e8e
+
+  # User provided section
+
+  # List of Local paths (relative to this file) that should be
+  # ignored by the migrate tool.
+  #
+  # Files that are not part of the templates will be ignored by default.
+  unmanaged_files:
+    - 'lib/main.dart'
+    - 'ios/Runner.xcodeproj/project.pbxproj'
+</file>
+
+<file path="mis_finanzas/analysis_options.yaml">
+# This file configures the analyzer, which statically analyzes Dart code to
+# check for errors, warnings, and lints.
+#
+# The issues identified by the analyzer are surfaced in the UI of Dart-enabled
+# IDEs (https://dart.dev/tools#ides-and-editors). The analyzer can also be
+# invoked from the command line by running `flutter analyze`.
+
+# The following line activates a set of recommended lints for Flutter apps,
+# packages, and plugins designed to encourage good coding practices.
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - web/**
+
+linter:
+  # The lint rules applied to this project can be customized in the
+  # section below to disable rules from the `package:flutter_lints/flutter.yaml`
+  # included above or to enable additional rules. A list of all available lints
+  # and their documentation is published at https://dart.dev/lints.
+  #
+  # Instead of disabling a lint rule for the entire project in the
+  # section below, it can also be suppressed for a single line of code
+  # or a specific dart file by using the `// ignore: name_of_lint` and
+  # `// ignore_for_file: name_of_lint` syntax on the line or in the file
+  # producing the lint.
+  rules:
+    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
+    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+
+# Additional information about this file can be found at
+# https://dart.dev/guides/language/analysis-options
+</file>
+
+<file path="mis_finanzas/build.sh">
+#!/bin/sh
+set -e
+
+if [ ! -d flutter-sdk ]; then
+  git clone https://github.com/flutter/flutter.git --depth 1 -b stable flutter-sdk
+fi
+
+flutter-sdk/bin/flutter build web --release \
+  --dart-define=FIREBASE_API_KEY="$FIREBASE_API_KEY" \
+  --dart-define=FIREBASE_APP_ID="$FIREBASE_APP_ID" \
+  --dart-define=FIREBASE_MESSAGING_SENDER_ID="$FIREBASE_MESSAGING_SENDER_ID" \
+  --dart-define=FIREBASE_PROJECT_ID="$FIREBASE_PROJECT_ID" \
+  --dart-define=FIREBASE_AUTH_DOMAIN="$FIREBASE_AUTH_DOMAIN" \
+  --dart-define=FIREBASE_STORAGE_BUCKET="$FIREBASE_STORAGE_BUCKET"
+</file>
+
+<file path="mis_finanzas/firebase.json">
+{"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"misgastos-1291c","configurations":{"web":"1:70807927015:web:1069556e1e09de5bc50a42"}}}}}}
+</file>
+
+<file path="mis_finanzas/README.md">
+# mis_finanzas
+
+A new Flutter project.
+
+## Getting Started
+
+This project is a starting point for a Flutter application.
+
+A few resources to get you started if this is your first Flutter project:
+
+- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
+- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
+- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+
+For help getting started with Flutter development, view the
+[online documentation](https://docs.flutter.dev/), which offers tutorials,
+samples, guidance on mobile development, and a full API reference.
+</file>
+
+<file path="README.md">
+# misFinanzas
+</file>
+
+<file path="mis_finanzas/lib/models/transaccion.dart">
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+enum TipoTransaccion { ingreso, gasto }
+
+/// Id reservado de la "cuenta" efectivo. Las tarjetas usan su id de Firestore.
+const cuentaEfectivo = 'efectivo';
+
+const categoriasGasto = [
+  'Comida', 'Transporte', 'Hogar', 'Salud', 'Ocio', 'Servicios', 'Otros',
+];
+const categoriasIngreso = ['Salario', 'Extra', 'Otros'];
+
+class Transaccion {
+  const Transaccion({
+    this.id = '',
+    required this.montoCentavos,
+    required this.tipo,
+    required this.categoria,
+    this.descripcion = '',
+    required this.fecha,
+    this.cuentaId = cuentaEfectivo,
+  });
+
+  final String id;
+  final int montoCentavos;
+  final TipoTransaccion tipo;
+  final String categoria;
+  final String descripcion;
+  final DateTime fecha;
+
+  /// 'efectivo' o el id de una tarjeta. Los ingresos siempre son 'efectivo'.
+  final String cuentaId;
+
+  bool get afectaEfectivo => cuentaId == cuentaEfectivo;
+  double get monto => montoCentavos / 100;
+
+  int get centavosConSigno =>
+      tipo == TipoTransaccion.ingreso ? montoCentavos : -montoCentavos;
+
+  factory Transaccion.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final d = doc.data()!;
+    return Transaccion(
+      id: doc.id,
+      montoCentavos: (d['montoCentavos'] as num).toInt(),
+      tipo: TipoTransaccion.values.byName(d['tipo'] as String),
+      categoria: d['categoria'] as String? ?? 'Otros',
+      descripcion: d['descripcion'] as String? ?? '',
+      fecha: (d['fecha'] as Timestamp).toDate(),
+      cuentaId: d['cuentaId'] as String? ?? cuentaEfectivo, // docs viejos
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'montoCentavos': montoCentavos,
+        'tipo': tipo.name,
+        'categoria': categoria,
+        'descripcion': descripcion,
+        'fecha': Timestamp.fromDate(fecha),
+        'cuentaId': cuentaId,
+      };
+}
+</file>
+
+<file path="mis_finanzas/lib/screens/auth_gate.dart">
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
+import 'login_page.dart';
+import 'home_shell.dart';
+
+/// Decide qué pantalla mostrar según el estado de la sesión.
+/// En web, Firebase Auth conserva la sesión (persistencia local) por defecto.
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        final user = snapshot.data;
+        if (user == null) return const LoginPage();
+        // La key fuerza a recrear el dashboard si cambia el usuario.
+        return HomeShell(key: ValueKey(user.uid), user: user);
+      },
+    );
+  }
+}
+</file>
+
+<file path="mis_finanzas/lib/screens/home_shell.dart">
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
+import '../services/finanzas_repo.dart';
+import '../theme/paleta.dart';
+import '../widgets/formulario_transaccion.dart';
+import 'ahorro_page.dart';
+import 'inicio_page.dart';
+import 'movimientos_page.dart';
+import 'tarjetas_page.dart';
+
+const _destinos = [
+  (icono: Icons.home_outlined, activo: Icons.home_rounded, texto: 'Inicio'),
+  (icono: Icons.receipt_long_outlined, activo: Icons.receipt_long, texto: 'Movimientos'),
+  (icono: Icons.credit_card_outlined, activo: Icons.credit_card, texto: 'Tarjetas'),
+  (icono: Icons.savings_outlined, activo: Icons.savings, texto: 'Ahorro'),
+];
+
+class HomeShell extends StatefulWidget {
+  const HomeShell({super.key, required this.user});
+  final User user;
+  @override
+  State<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends State<HomeShell> {
+  late final FinanzasRepo _repo = FinanzasRepo(widget.user.uid);
+  int _tab = 0;
+
+  @override
+  void dispose() {
+    _repo.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _repo,
+      builder: (context, _) {
+        if (_repo.error != null) {
+          return Scaffold(body: Center(child: Text('Error: ${_repo.error}')));
+        }
+        if (!_repo.listo) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+
+        final cuerpo = IndexedStack(index: _tab, children: [
+          InicioPage(repo: _repo, onVerTodos: () => setState(() => _tab = 1)),
+          MovimientosPage(repo: _repo),
+          TarjetasPage(repo: _repo),
+          AhorroPage(repo: _repo),
+        ]);
+
+        // El botón "Nuevo" solo en Inicio y Movimientos.
+        final fab = _tab <= 1
+            ? FloatingActionButton.extended(
+                backgroundColor: Paleta.lima,
+                foregroundColor: Colors.black,
+                onPressed: () => mostrarFormularioTransaccion(context, _repo),
+                icon: const Icon(Icons.add),
+                label: const Text('Nuevo'),
+              )
+            : null;
+
+        return LayoutBuilder(builder: (context, c) {
+          if (c.maxWidth >= 840) {
+            return Scaffold(
+              floatingActionButton: fab,
+              body: Row(children: [
+                NavigationRail(
+                  selectedIndex: _tab,
+                  onDestinationSelected: (i) => setState(() => _tab = i),
+                  labelType: NavigationRailLabelType.all,
+                  destinations: [
+                    for (final d in _destinos)
+                      NavigationRailDestination(
+                          icon: Icon(d.icono),
+                          selectedIcon: Icon(d.activo),
+                          label: Text(d.texto)),
+                  ],
+                ),
+                const VerticalDivider(width: 1, color: Colors.white10),
+                Expanded(child: cuerpo),
+              ]),
+            );
+          }
+          return Scaffold(
+            floatingActionButton: fab,
+            body: cuerpo,
+            bottomNavigationBar: NavigationBar(
+              selectedIndex: _tab,
+              onDestinationSelected: (i) => setState(() => _tab = i),
+              destinations: [
+                for (final d in _destinos)
+                  NavigationDestination(
+                      icon: Icon(d.icono),
+                      selectedIcon: Icon(d.activo),
+                      label: d.texto),
+              ],
+            ),
+          );
+        });
+      },
+    );
+  }
+}
+</file>
+
+<file path="mis_finanzas/lib/screens/inicio_page.dart">
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
+import '../services/finanzas_repo.dart';
+import '../theme/paleta.dart';
+import '../utils/analisis.dart';
+import '../utils/formato.dart';
+import '../widgets/acciones_transaccion.dart';
+import '../widgets/glass_card.dart';
+import '../widgets/grafica_gastos.dart';
+import '../widgets/mascota.dart';
+import '../widgets/movimiento_tile.dart';
+import '../widgets/sync_chip.dart';
+import '../widgets/semana_card.dart';
+import '../widgets/formulario_transaccion.dart';
+import '../models/transaccion.dart';
+
+class InicioPage extends StatefulWidget {
+  const InicioPage({
+    super.key,
+    required this.repo,
+    required this.onVerTodos,
+  });
+  final VoidCallback onVerTodos;
+  final FinanzasRepo repo;
+
+  @override
+  State<InicioPage> createState() => _InicioPageState();
+}
+
+class _InicioPageState extends State<InicioPage> {
+  Periodo _periodo = const Periodo.meses(1);
+
+  static const _presets = [Periodo.dias(7), Periodo.dias(14), Periodo.meses(1)];
+
+  Future<int?> _pedirMeses(int inicial) {
+    var valor = inicial.clamp(1, 36).toInt();
+    return showDialog<int>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: const Text('¿Cuántos meses?'),
+          content: Row(mainAxisSize: MainAxisSize.min, children: [
+            IconButton.filledTonal(
+                onPressed: valor > 1 ? () => setS(() => valor--) : null,
+                icon: const Icon(Icons.remove)),
+            SizedBox(
+                width: 80,
+                child: Text('$valor',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(ctx).textTheme.headlineMedium)),
+            IconButton.filledTonal(
+                onPressed: valor < 36 ? () => setS(() => valor++) : null,
+                icon: const Icon(Icons.add)),
+          ]),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, valor),
+                child: const Text('Aplicar')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final movs = widget.repo.lote.items;
+    final r = analizar(movs, _periodo, DateTime.now());
+    final lectura = evaluarMascota(
+        balance: widget.repo.balanceEfectivo, r: r, hayDatos: movs.isNotEmpty);
+
+    final izq = <Widget>[
+      _cabecera(),
+      const SizedBox(height: 8),
+      _tarjetaMascota(lectura),
+      const SizedBox(height: 12),
+      SemanaCard(s: widget.repo.semana),
+      const SizedBox(height: 12),
+      _tarjetaGrafica(r),
+    ];
+    final der = <Widget>[
+      const SizedBox(height: 8),
+      Row(children: [
+        Text('Últimos movimientos',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700)),
+        const Spacer(),
+        TextButton(onPressed: widget.onVerTodos, child: const Text('Ver todos')),
+      ]),
+      if (movs.isEmpty)
+        const Padding(
+          padding: EdgeInsets.all(24),
+          child: Text('Aún no hay movimientos.\nToca "Nuevo" para empezar.',
+              textAlign: TextAlign.center),
+        ),
+      for (final t in movs.take(6))
+        MovimientoTile(
+          t: t,
+          mostrarFecha: true,
+          onEliminar: () =>
+              eliminarTransaccion(context, widget.repo.transacciones, t, confirmar: true),
+          cuenta: t.tipo == TipoTransaccion.gasto ? widget.repo.nombreCuenta(t.cuentaId) : null,
+          onTap: () => mostrarFormularioTransaccion(context, widget.repo, inicial: t),
+        ),
+    ];
+
+    const pad = EdgeInsets.fromLTRB(16, 8, 16, 110);
+    return SafeArea(
+      bottom: false,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: LayoutBuilder(builder: (context, c) {
+            if (c.maxWidth >= 900) {
+              return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(flex: 3, child: ListView(padding: pad, children: izq)),
+                Expanded(flex: 2, child: ListView(padding: pad, children: der)),
+              ]);
+            }
+            return ListView(padding: pad, children: [...izq, ...der]);
+          }),
+        ),
+      ),
+    );
+  }
+
+  Widget _cabecera() => Row(children: [
+        Expanded(
+          child: Text('Mis Finanzas',
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w800)),
+        ),
+        SyncChip(lote: widget.repo.lote),
+        IconButton(
+          tooltip: 'Cerrar sesión',
+          icon: const Icon(Icons.logout),
+          onPressed: () => FirebaseAuth.instance.signOut(),
+        ),
+      ]);
+
+  Widget _tarjetaMascota(Lectura l) {
+    final tema = Theme.of(context);
+    final acento = switch (l.tono) {
+      Tono.positivo => Paleta.esmeralda,
+      Tono.neutro => Paleta.menta,
+      Tono.alerta => Paleta.gasto,
+    };
+    return GlassCard(
+      acento: acento,
+      child: Row(children: [
+        Mascota(l.estado, tamano: 120),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Balance actual',
+                style: tema.textTheme.labelLarge
+                    ?.copyWith(color: tema.colorScheme.outline)),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(formatoUsd(widget.repo.balanceEfectivo),
+                  style: tema.textTheme.displaySmall
+                      ?.copyWith(fontWeight: FontWeight.w800)),
+            ),
+            const SizedBox(height: 6),
+            Text(l.mensaje, style: tema.textTheme.bodyMedium),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget _tarjetaGrafica(ResumenPeriodo r) {
+    final tema = Theme.of(context);
+    return GlassCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Text('Gastos', style: tema.textTheme.titleMedium),
+          const Spacer(),
+          _chipVariacion(r.variacion),
+        ]),
+        const SizedBox(height: 4),
+        Text(formatoUsd(r.gastos),
+            style: tema.textTheme.headlineMedium
+                ?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 12),
+        GraficaGastos(serie: r.serie, seriePrev: r.seriePrev),
+        const SizedBox(height: 6),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text(fechaMuyCorta(r.inicio), style: tema.textTheme.bodySmall),
+          Text('Línea punteada: periodo anterior',
+              style: tema.textTheme.bodySmall
+                  ?.copyWith(color: tema.colorScheme.outline)),
+          Text(fechaMuyCorta(r.hoy), style: tema.textTheme.bodySmall),
+        ]),
+        const SizedBox(height: 14),
+        Wrap(spacing: 8, runSpacing: 4, children: [
+          for (final p in _presets)
+            ChoiceChip(
+              label: Text(p.etiqueta),
+              selected: _periodo == p,
+              onSelected: (_) => setState(() => _periodo = p),
+            ),
+          ChoiceChip(
+            avatar: const Icon(Icons.tune, size: 16),
+            label: Text(_periodo.meses > 1 ? _periodo.etiqueta : 'Meses…'),
+            selected: _periodo.meses > 1,
+            onSelected: (_) async {
+              final m = await _pedirMeses(_periodo.meses > 1 ? _periodo.meses : 3);
+              if (m != null) setState(() => _periodo = Periodo.meses(m));
+            },
+          ),
+        ]),
+        const Divider(height: 28, color: Colors.white12),
+        Row(children: [
+          Expanded(
+              child: _Mini('Ingresos', formatoUsd(r.ingresos),
+                  Icons.arrow_downward, Paleta.esmeralda)),
+          Expanded(
+              child: _Mini('Gastos', formatoUsd(r.gastos), Icons.arrow_upward,
+                  Paleta.gasto)),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _chipVariacion(double? v) {
+    final tema = Theme.of(context);
+    if (v == null) {
+      return Text('Sin periodo previo',
+          style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.outline));
+    }
+    final sube = v > 0;
+    final color = v == 0 ? tema.colorScheme.outline : (sube ? Paleta.gasto : Paleta.esmeralda);
+    final texto = v == 0
+        ? 'Sin cambios'
+        : '${sube ? '+' : ''}${(v * 100).toStringAsFixed(0)} % vs. anterior';
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(v == 0 ? Icons.trending_flat : (sube ? Icons.trending_up : Icons.trending_down),
+          size: 18, color: color),
+      const SizedBox(width: 4),
+      Text(texto,
+          style: tema.textTheme.labelMedium
+              ?.copyWith(color: color, fontWeight: FontWeight.w700)),
+    ]);
+  }
+}
+
+class _Mini extends StatelessWidget {
+  const _Mini(this.etiqueta, this.valor, this.icono, this.color);
+  final String etiqueta, valor;
+  final IconData icono;
+  final Color color;
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    return Row(children: [
+      Icon(icono, size: 18, color: color),
+      const SizedBox(width: 6),
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(etiqueta,
+            style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.outline)),
+        Text(valor,
+            style: tema.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+      ]),
+    ]);
+  }
+}
+</file>
+
+<file path="mis_finanzas/lib/screens/login_page.dart">
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
+import '../models/estado_mascota.dart';
+import '../theme/paleta.dart';
+import '../widgets/glass_card.dart';
+import '../widgets/mascota.dart';
+
+class _Consejo {
+  const _Consejo(this.icono, this.titulo, this.texto);
+  final IconData icono;
+  final String titulo, texto;
+}
+
+const _consejos = [
+  _Consejo(Icons.autorenew_rounded, 'Automatiza tu ahorro',
+      'Programa una transferencia el día que cobras: lo que no ves, no lo gastas.'),
+  _Consejo(Icons.event_repeat_rounded, 'Revisa tu deuda semanalmente',
+      'Cinco minutos por semana evitan intereses y sorpresas a fin de mes.'),
+  _Consejo(Icons.trending_down_rounded, 'Reduce la deuda con pagos extra',
+      'Un abono extra al capital recorta intereses y acorta el plazo.'),
+  _Consejo(Icons.savings_outlined, 'Págate primero a ti',
+      'Aparta tu ahorro al recibir ingresos y gasta lo que quede.'),
+  _Consejo(Icons.shield_outlined, 'Arma tu fondo de emergencia',
+      'Apunta a cubrir de 3 a 6 meses de gastos básicos.'),
+];
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  final _pageCtrl = PageController(viewportFraction: 0.94);
+  Timer? _timer;
+  int _pagina = 0;
+  bool _cargando = false;
+  bool _ocultar = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!_pageCtrl.hasClients) return;
+      _pageCtrl.animateToPage((_pagina + 1) % _consejos.length,
+          duration: const Duration(milliseconds: 450),
+          curve: Curves.easeOutCubic);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageCtrl.dispose();
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _entrar() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _cargando = true;
+      _error = null;
+    });
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _email.text.trim(), password: _password.text);
+    } on FirebaseAuthException catch (e) {
+      setState(() => _error = _mensaje(e.code));
+    } finally {
+      if (mounted) setState(() => _cargando = false);
+    }
+  }
+
+  String _mensaje(String code) {
+    switch (code) {
+      case 'invalid-credential':
+      case 'user-not-found':
+      case 'wrong-password':
+        return 'Correo o contraseña incorrectos.';
+      case 'invalid-email':
+        return 'El correo no es válido.';
+      case 'too-many-requests':
+        return 'Demasiados intentos. Espera un momento.';
+      case 'network-request-failed':
+        return 'Sin conexión. Revisa tu internet.';
+      default:
+        return 'No se pudo iniciar sesión ($code).';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    return Scaffold(
+      body: Stack(children: [
+        const Positioned(top: -120, right: -80, child: _Resplandor(Paleta.esmeralda)),
+        const Positioned(bottom: -140, left: -100, child: _Resplandor(Paleta.menta)),
+        SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                shrinkWrap: true,
+                children: [
+                  const Center(child: Mascota(EstadoMascota.bolsa, tamano: 150)),
+                  Text('Mis Finanzas',
+                      textAlign: TextAlign.center,
+                      style: tema.textTheme.headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 4),
+                  Text('Tu dinero, bajo control.',
+                      textAlign: TextAlign.center,
+                      style: tema.textTheme.bodyMedium
+                          ?.copyWith(color: tema.colorScheme.outline)),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    height: 120,
+                    child: PageView.builder(
+                      controller: _pageCtrl,
+                      itemCount: _consejos.length,
+                      onPageChanged: (i) => setState(() => _pagina = i),
+                      itemBuilder: (_, i) {
+                        final c = _consejos[i];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: GlassCard(
+                            acento: Paleta.menta,
+                            child: Row(children: [
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                      colors: [Paleta.lima, Paleta.menta]),
+                                ),
+                                child: Icon(c.icono, color: Colors.black),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(c.titulo,
+                                        style: tema.textTheme.titleSmall
+                                            ?.copyWith(fontWeight: FontWeight.w700)),
+                                    const SizedBox(height: 4),
+                                    Text(c.texto,
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: tema.textTheme.bodySmall?.copyWith(
+                                            color: tema.colorScheme.outline)),
+                                  ],
+                                ),
+                              ),
+                            ]),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    for (var i = 0; i < _consejos.length; i++)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        height: 8,
+                        width: i == _pagina ? 22 : 8,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: i == _pagina ? Paleta.lima : Colors.white24,
+                        ),
+                      ),
+                  ]),
+                  const SizedBox(height: 24),
+                  Form(
+                    key: _formKey,
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      TextFormField(
+                        controller: _email,
+                        keyboardType: TextInputType.emailAddress,
+                        autofillHints: const [AutofillHints.email],
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                            labelText: 'Correo', prefixIcon: Icon(Icons.mail_outline)),
+                        validator: (v) => (v == null || !v.contains('@'))
+                            ? 'Ingresa un correo válido'
+                            : null,
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _password,
+                        obscureText: _ocultar,
+                        autofillHints: const [AutofillHints.password],
+                        onFieldSubmitted: (_) => _entrar(),
+                        decoration: InputDecoration(
+                          labelText: 'Contraseña',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(_ocultar
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined),
+                            onPressed: () => setState(() => _ocultar = !_ocultar),
+                          ),
+                        ),
+                        validator: (v) =>
+                            (v == null || v.length < 6) ? 'Mínimo 6 caracteres' : null,
+                      ),
+                      if (_error != null) ...[
+                        const SizedBox(height: 12),
+                        Text(_error!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: tema.colorScheme.error)),
+                      ],
+                      const SizedBox(height: 20),
+                      FilledButton(
+                        onPressed: _cargando ? null : _entrar,
+                        child: _cargando
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.black))
+                            : const Text('Entrar'),
+                      ),
+                    ]),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+class _Resplandor extends StatelessWidget {
+  const _Resplandor(this.color);
+  final Color color;
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        child: Container(
+          width: 340,
+          height: 340,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(colors: [
+              color.withValues(alpha: 0.28),
+              color.withValues(alpha: 0),
+            ]),
+          ),
+        ),
+      );
+}
+</file>
+
+<file path="mis_finanzas/lib/screens/movimientos_page.dart">
+import 'package:flutter/material.dart';
+
+import '../models/transaccion.dart';
+import '../services/transacciones_service.dart';
+import '../services/finanzas_repo.dart';
+import '../utils/formato.dart';
+import '../widgets/acciones_transaccion.dart';
+import '../widgets/mascota.dart';
+import '../widgets/formulario_transaccion.dart';
+import '../models/estado_mascota.dart';
+import '../widgets/movimiento_tile.dart';
+import '../widgets/sync_chip.dart';
+
+class MovimientosPage extends StatefulWidget {
+  const MovimientosPage({super.key, required this.repo});
+  final FinanzasRepo repo;
+  @override
+  State<MovimientosPage> createState() => _MovimientosPageState();
+}
+
+class _MovimientosPageState extends State<MovimientosPage> {
+  int _filtro = 0; // 0 todos, 1 gastos, 2 ingresos
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final lista = widget.repo.lote.items.where((t) {
+      if (_filtro == 1) return t.tipo == TipoTransaccion.gasto;
+      if (_filtro == 2) return t.tipo == TipoTransaccion.ingreso;
+      return true;
+    }).toList();
+
+    final items = <Object>[];
+    DateTime? diaActual;
+    for (final t in lista) {
+      final d = DateTime(t.fecha.year, t.fecha.month, t.fecha.day);
+      if (diaActual != d) {
+        diaActual = d;
+        items.add(d);
+      }
+      items.add(t);
+    }
+
+    return SafeArea(
+      bottom: false,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: CustomScrollView(slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(
+                      child: Text('Movimientos',
+                          style: tema.textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w800)),
+                    ),
+                    SyncChip(lote: widget.repo.lote),
+                    if (modoPruebas)
+                      PopupMenuButton<String>(
+                        onSelected: (v) {
+                          if (v == 'gen') widget.repo.transacciones.generarPrueba(50);
+                          if (v == 'del') widget.repo.transacciones.borrarPrueba();
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'gen', child: Text('Generar 50 de prueba')),
+                          PopupMenuItem(value: 'del', child: Text('Borrar los de prueba')),
+                        ],
+                      ),
+                  ]),
+                  const SizedBox(height: 12),
+                  SegmentedButton<int>(
+                    segments: const [
+                      ButtonSegment(value: 0, label: Text('Todos')),
+                      ButtonSegment(value: 1, label: Text('Gastos')),
+                      ButtonSegment(value: 2, label: Text('Ingresos')),
+                    ],
+                    selected: {_filtro},
+                    onSelectionChanged: (s) => setState(() => _filtro = s.first),
+                  ),
+                ]),
+              ),
+            ),
+            if (lista.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Mascota(EstadoMascota.escritorio, tamano: 140),
+                    SizedBox(height: 8),
+                    Text('Nada por aquí todavía.'),
+                  ]),
+                ),
+              )
+            else
+              SliverList.builder(
+                itemCount: items.length,
+                itemBuilder: (context, i) {
+                  final item = items[i];
+                  if (item is DateTime) {
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                      child: Text(fechaLarga(item),
+                          style: tema.textTheme.labelLarge
+                              ?.copyWith(color: tema.colorScheme.outline)),
+                    );
+                  }
+                  final t = item as Transaccion;
+                  return Dismissible(
+                    key: ValueKey(t.id),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      color: tema.colorScheme.error.withValues(alpha: 0.25),
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 24),
+                      child: Icon(Icons.delete_outline, color: tema.colorScheme.error),
+                    ),
+                    onDismissed: (_) => eliminarTransaccion(
+                        context, widget.repo.transacciones, t, confirmar: false),
+                    child: MovimientoTile(
+                      t: t,
+                      cuenta: t.tipo == TipoTransaccion.gasto ? widget.repo.nombreCuenta(t.cuentaId) : null,
+                      onTap: () => mostrarFormularioTransaccion(context, widget.repo, inicial: t),
+                      onEliminar: () => eliminarTransaccion(
+                          context, widget.repo.transacciones, t, confirmar: true),
+                    ),
+                  );
+                },
+              ),
+            const SliverToBoxAdapter(child: SizedBox(height: 110)),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+</file>
+
+<file path="mis_finanzas/lib/services/transacciones_service.dart">
+import 'dart:math';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../models/transaccion.dart';
+
+/// true solo en builds de prueba: --dart-define=MODO_PRUEBAS=true
+const modoPruebas = bool.fromEnvironment('MODO_PRUEBAS');
+
+class LoteTransacciones {
+  const LoteTransacciones(this.items,
+      {this.pendientes = false, this.desdeCache = false});
+  final List<Transaccion> items;
+
+  /// Hay escrituras locales aún no confirmadas por el servidor.
+  final bool pendientes;
+
+  /// El snapshot viene de la caché (sin conexión o aún cargando).
+  final bool desdeCache;
+}
+
+class TransaccionesService {
+  TransaccionesService(this.uid, {FirebaseFirestore? db})
+      : _db = db ?? FirebaseFirestore.instance;
+
+  final String uid;
+  final FirebaseFirestore _db;
+  static const prefijoPrueba = '[test]';
+
+  CollectionReference<Map<String, dynamic>> get _col =>
+      _db.collection('users').doc(uid).collection('transacciones');
+
+  Stream<LoteTransacciones> observar({int limite = 2000}) => _col
+      .orderBy('fecha', descending: true)
+      .limit(limite)
+      .snapshots(includeMetadataChanges: true)
+      .map((s) => LoteTransacciones(
+            s.docs.map(Transaccion.fromDoc).toList(),
+            pendientes: s.metadata.hasPendingWrites,
+            desdeCache: s.metadata.isFromCache,
+          ));
+
+  // Sin conexión estos Future no se completan hasta sincronizar: no usar await en la UI.
+  Future<void> agregar(Transaccion t) => _col.doc().set(t.toMap());
+  Future<void> actualizar(Transaccion t) => _col.doc(t.id).update(t.toMap());
+  Future<void> eliminar(String id) => _col.doc(id).delete();
+
+  // ---- Solo para pruebas (se muestran con MODO_PRUEBAS=true) ----
+
+  Future<void> generarPrueba(int n) {
+    final batch = _db.batch();
+    final rnd = Random();
+    final ahora = DateTime.now();
+    for (var i = 0; i < n; i++) {
+      final ingreso = i % 5 == 0;
+      final cats = ingreso ? categoriasIngreso : categoriasGasto;
+      batch.set(
+        _col.doc(),
+        Transaccion(
+          montoCentavos: 100 + rnd.nextInt(9900),
+          tipo: ingreso ? TipoTransaccion.ingreso : TipoTransaccion.gasto,
+          categoria: cats[rnd.nextInt(cats.length)],
+          descripcion: '$prefijoPrueba #$i',
+          fecha: ahora.subtract(Duration(days: rnd.nextInt(60))),
+        ).toMap(),
+      );
+    }
+    return batch.commit();
+  }
+
+  Future<void> borrarPrueba() async {
+    // Source.cache: funciona igual con o sin red.
+    final s = await _col
+        .where('descripcion', isGreaterThanOrEqualTo: prefijoPrueba)
+        .where('descripcion', isLessThan: '$prefijoPrueba\uf8ff')
+        .get(const GetOptions(source: Source.cache));
+    final batch = _db.batch();
+    for (final d in s.docs) {
+      batch.delete(d.reference);
+    }
+    return batch.commit();
+  }
+}
+</file>
+
+<file path="mis_finanzas/lib/utils/formato.dart">
+import 'package:intl/intl.dart';
+
+final _usd = NumberFormat.currency(locale: 'en_US', symbol: r'$');
+
+/// Formatea centavos como USD: 1250 -> $12.50, -500 -> -$5.00
+String formatoUsd(int centavos) => _usd.format(centavos / 100);
+
+final _fechaLarga = DateFormat("EEEE d 'de' MMMM", 'es');
+final _fechaCorta = DateFormat('d MMM yyyy', 'es');
+final _fechaMuyCorta = DateFormat('d MMM', 'es');
+
+String fechaLarga(DateTime d) {
+  final s = _fechaLarga.format(d);
+  return s[0].toUpperCase() + s.substring(1);
+}
+
+String fechaCorta(DateTime d) => _fechaCorta.format(d);
+
+String fechaMuyCorta(DateTime d) => _fechaMuyCorta.format(d);
+
+/// Convierte "12.5" o "12,50" a centavos. Devuelve null si no es válido.
+int? parseCentavos(String texto) {
+  final limpio = texto.trim().replaceAll(',', '.');
+  if (!RegExp(r'^\d+(\.\d{0,2})?$').hasMatch(limpio)) return null;
+  final valor = double.tryParse(limpio);
+  if (valor == null) return null;
+  return (valor * 100).round();
+}
+</file>
+
+<file path="mis_finanzas/lib/widgets/movimiento_tile.dart">
+import 'package:flutter/material.dart';
+import '../models/transaccion.dart';
+import '../theme/paleta.dart';
+import '../utils/formato.dart';
+
+const _iconos = <String, IconData>{
+  'Comida': Icons.restaurant,
+  'Transporte': Icons.directions_bus,
+  'Hogar': Icons.home,
+  'Salud': Icons.favorite,
+  'Ocio': Icons.sports_esports,
+  'Servicios': Icons.receipt_long,
+  'Salario': Icons.payments,
+  'Extra': Icons.add_card,
+};
+
+class MovimientoTile extends StatelessWidget {
+  const MovimientoTile({
+    super.key,
+    required this.t,
+    required this.onEliminar,
+    this.mostrarFecha = false,
+    this.cuenta,
+    this.onTap,
+  });
+  final Transaccion t;
+  final VoidCallback onEliminar;
+  final bool mostrarFecha;
+  final String? cuenta;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final ingreso = t.tipo == TipoTransaccion.ingreso;
+    final color = ingreso ? Paleta.esmeralda : Paleta.gasto;
+    return ListTile(
+      contentPadding: const EdgeInsets.only(left: 12, right: 4),
+      onTap: onTap,
+      subtitle: Text([
+        t.categoria,
+        if (cuenta != null) cuenta!,
+        if (mostrarFecha) fechaCorta(t.fecha),
+      ].join(' · ')),
+      leading: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Icon(_iconos[t.categoria] ?? Icons.category, color: color),
+      ),
+      title: Text(t.descripcion.isEmpty ? t.categoria : t.descripcion,
+          maxLines: 1, overflow: TextOverflow.ellipsis),
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        Text('${ingreso ? '+' : '-'}${formatoUsd(t.montoCentavos)}',
+            style: tema.textTheme.titleMedium
+                ?.copyWith(color: color, fontWeight: FontWeight.w700)),
+        IconButton(
+          tooltip: 'Eliminar',
+          icon: const Icon(Icons.delete_outline, size: 20),
+          color: tema.colorScheme.outline,
+          onPressed: onEliminar,
+        ),
+      ]),
+    );
+  }
+}
+</file>
+
+<file path="mis_finanzas/web/index.html">
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="description" content="Control personal de gastos e ingresos.">
+  <meta name="theme-color" content="#0B0F0D">
+
+  <!-- iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Mis Finanzas">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <title>Mis Finanzas</title>
+  <link rel="manifest" href="manifest.json" crossorigin="use-credentials">
+
+  <style>
+    html, body {
+      margin: 0; 
+      height: 100%;
+      background: #0B0F0D;
+      overscroll-behavior: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+  </style>
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
+</file>
+
+<file path="mis_finanzas/web/manifest.json">
+{
+  "name": "Mis Finanzas",
+  "short_name": "Finanzas",
+  "id": "/",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "lang": "es",
+  "background_color": "#0B0F0D",
+  "theme_color": "#0B0F0D",
+  "description": "Control personal de gastos e ingresos.",
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "icons/Icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/Icon-512.png", "sizes": "512x512", "type": "image/png" },
+    {
+      "src": "icons/Icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/Icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
+</file>
+
+<file path="mis_finanzas/.gitignore">
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Widget Preview related
+.widget_preview/
+
+# Secretos locales
+env.json
+env.*.json
+!env.example.json
+
+# Ya no se usa
+lib/firebase_options.dart
+</file>
+
+<file path="mis_finanzas/lib/widgets/formulario_transaccion.dart">
+import 'package:flutter/material.dart';
+
+import '../models/transaccion.dart';
+import '../services/finanzas_repo.dart';
+import '../utils/analisis.dart';
+import '../utils/formato.dart';
+import 'mascota.dart';
+
+/// Con [inicial] abre en modo edición.
+Future<void> mostrarFormularioTransaccion(
+  BuildContext context,
+  FinanzasRepo repo, {
+  Transaccion? inicial,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: true,
+    constraints: const BoxConstraints(maxWidth: 520),
+    builder: (_) => _Formulario(repo: repo, inicial: inicial),
+  );
+}
+
+class _Formulario extends StatefulWidget {
+  const _Formulario({required this.repo, this.inicial});
+  final FinanzasRepo repo;
+  final Transaccion? inicial;
+  @override
+  State<_Formulario> createState() => _FormularioState();
+}
+
+class _FormularioState extends State<_Formulario> {
+  final _formKey = GlobalKey<FormState>();
+  late final _monto = TextEditingController(
+      text: widget.inicial == null
+          ? ''
+          : (widget.inicial!.montoCentavos / 100).toStringAsFixed(2));
+  late final _descripcion =
+      TextEditingController(text: widget.inicial?.descripcion ?? '');
+  late TipoTransaccion _tipo = widget.inicial?.tipo ?? TipoTransaccion.gasto;
+  late String _categoria = widget.inicial?.categoria ??
+      (_tipo == TipoTransaccion.gasto ? categoriasGasto.first : categoriasIngreso.first);
+  late String _cuentaId = widget.inicial?.cuentaId ?? cuentaEfectivo;
+  late DateTime _fecha = widget.inicial?.fecha ?? DateTime.now();
+
+  bool get _editando => widget.inicial != null;
+
+  List<String> get _categorias {
+    final base = _tipo == TipoTransaccion.gasto ? categoriasGasto : categoriasIngreso;
+    return base.contains(_categoria) ? base : [...base, _categoria];
+  }
+
+  List<(String, String)> get _cuentas {
+    final l = [
+      (cuentaEfectivo, 'Efectivo'),
+      for (final t in widget.repo.tarjetas) (t.id, t.nombre),
+    ];
+    if (!l.any((c) => c.$1 == _cuentaId)) {
+      l.add((_cuentaId, widget.repo.nombreCuenta(_cuentaId)));
+    }
+    return l;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _monto.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _monto.dispose();
+    _descripcion.dispose();
+    super.dispose();
+  }
+
+  /// Contra qué se compara el monto para la reacción de la mascota.
+  int _referencia() {
+    final repo = widget.repo;
+    var ref = _cuentaId == cuentaEfectivo
+        ? repo.balanceEfectivo
+        : repo.restanteTarjeta(_cuentaId);
+    final o = widget.inicial;
+    if (o != null && o.tipo == TipoTransaccion.gasto && o.cuentaId == _cuentaId) {
+      ref += o.montoCentavos; // al editar, el gasto original ya estaba descontado
+    }
+    return ref;
+  }
+
+  String _pista() {
+    final repo = widget.repo;
+    if (_cuentaId == cuentaEfectivo) {
+      return 'Efectivo libre: ${formatoUsd(repo.balanceEfectivo - repo.ahorroTotal)}';
+    }
+    return 'Restante en esta tarjeta este mes: ${formatoUsd(repo.restanteTarjeta(_cuentaId))}';
+  }
+
+  Future<void> _elegirFecha() async {
+    final hoy = DateTime.now();
+    final minimo = DateTime(hoy.year - 5);
+    final f = await showDatePicker(
+      context: context,
+      initialDate: _fecha,
+      firstDate: minimo.isBefore(_fecha) ? minimo : _fecha,
+      lastDate: hoy.isAfter(_fecha) ? hoy : _fecha,
+    );
+    if (f != null) setState(() => _fecha = f);
+  }
+
+  void _guardar() {
+    if (!_formKey.currentState!.validate()) return;
+    final base = widget.inicial;
+    final t = Transaccion(
+      id: base?.id ?? '',
+      montoCentavos: parseCentavos(_monto.text)!,
+      tipo: _tipo,
+      categoria: _categoria,
+      descripcion: _descripcion.text.trim(),
+      fecha: _fecha,
+      cuentaId: _tipo == TipoTransaccion.ingreso ? cuentaEfectivo : _cuentaId,
+    );
+    // Sin await: offline el Future no se completa, pero el stream ya refleja el cambio.
+    if (base == null) {
+      widget.repo.transacciones.agregar(t);
+    } else {
+      widget.repo.transacciones.actualizar(t);
+    }
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final lectura = reaccionAlMonto(
+      tipo: _tipo,
+      centavos: parseCentavos(_monto.text) ?? 0,
+      balance: _referencia(),
+    );
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(children: [
+                Mascota(lectura.estado, tamano: 84),
+                const SizedBox(width: 12),
+                Expanded(child: Text(lectura.mensaje, style: tema.textTheme.bodyLarge)),
+              ]),
+              const SizedBox(height: 12),
+              SegmentedButton<TipoTransaccion>(
+                segments: const [
+                  ButtonSegment(
+                      value: TipoTransaccion.gasto,
+                      label: Text('Gasto'),
+                      icon: Icon(Icons.arrow_upward)),
+                  ButtonSegment(
+                      value: TipoTransaccion.ingreso,
+                      label: Text('Ingreso'),
+                      icon: Icon(Icons.arrow_downward)),
+                ],
+                selected: {_tipo},
+                onSelectionChanged: (s) => setState(() {
+                  _tipo = s.first;
+                  _categoria = _categorias.first;
+                }),
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _monto,
+                autofocus: !_editando,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: tema.textTheme.headlineMedium,
+                decoration: const InputDecoration(prefixText: r'$ ', hintText: '0.00'),
+                validator: (v) {
+                  final c = parseCentavos(v ?? '');
+                  if (c == null) return 'Monto inválido';
+                  if (c <= 0) return 'Debe ser mayor a 0';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              Wrap(spacing: 8, runSpacing: 4, children: [
+                for (final c in _categorias)
+                  ChoiceChip(
+                    label: Text(c),
+                    selected: _categoria == c,
+                    onSelected: (_) => setState(() => _categoria = c),
+                  ),
+              ]),
+              if (_tipo == TipoTransaccion.gasto) ...[
+                const SizedBox(height: 16),
+                Text('Pagar con',
+                    style: tema.textTheme.labelLarge
+                        ?.copyWith(color: tema.colorScheme.outline)),
+                const SizedBox(height: 8),
+                Wrap(spacing: 8, runSpacing: 4, children: [
+                  for (final (id, nombre) in _cuentas)
+                    ChoiceChip(
+                      avatar: Icon(
+                          id == cuentaEfectivo ? Icons.payments_outlined : Icons.credit_card,
+                          size: 16),
+                      label: Text(nombre),
+                      selected: _cuentaId == id,
+                      onSelected: (_) => setState(() => _cuentaId = id),
+                    ),
+                ]),
+                const SizedBox(height: 6),
+                Text(_pista(),
+                    style: tema.textTheme.bodySmall
+                        ?.copyWith(color: tema.colorScheme.outline)),
+              ],
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descripcion,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(labelText: 'Descripción (opcional)'),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _elegirFecha,
+                icon: const Icon(Icons.calendar_today),
+                label: Text(fechaCorta(_fecha)),
+              ),
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: _guardar,
+                icon: const Icon(Icons.check),
+                label: Text(_editando ? 'Guardar cambios' : 'Guardar'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+</file>
+
+<file path="mis_finanzas/test/widget_test.dart">
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mis_finanzas/models/transaccion.dart';
+import 'package:mis_finanzas/utils/formato.dart';
+
+void main() {
+  group('formatoUsd', () {
+    test('formatea centavos como dólares', () {
+      expect(formatoUsd(1250), r'$12.50');
+      expect(formatoUsd(-500), r'-$5.00');
+      expect(formatoUsd(123456), r'$1,234.56');
+    });
+  });
+
+  group('parseCentavos', () {
+    test('acepta punto y coma decimal', () {
+      expect(parseCentavos('12.5'), 1250);
+      expect(parseCentavos('12,50'), 1250);
+      expect(parseCentavos('7'), 700);
+    });
+    test('rechaza entradas inválidas', () {
+      expect(parseCentavos(''), isNull);
+      expect(parseCentavos('abc'), isNull);
+      expect(parseCentavos('1.234'), isNull);
+      expect(parseCentavos('-5'), isNull);
+    });
+  });
+
+  group('Transaccion', () {
+    test('centavosConSigno distingue ingresos y gastos', () {
+      final ingreso = Transaccion(
+          montoCentavos: 1000,
+          tipo: TipoTransaccion.ingreso,
+          categoria: 'Salario',
+          fecha: DateTime(2026, 1, 1));
+      final gasto = Transaccion(
+          montoCentavos: 400,
+          tipo: TipoTransaccion.gasto,
+          categoria: 'Comida',
+          fecha: DateTime(2026, 1, 1));
+      expect(ingreso.centavosConSigno, 1000);
+      expect(gasto.centavosConSigno, -400);
+    });
+  });
+}
+</file>
+
+<file path="mis_finanzas/pubspec.lock">
+# Generated by pub
+# See https://dart.dev/tools/pub/glossary#lockfile
+packages:
+  _flutterfire_internals:
+    dependency: transitive
+    description:
+      name: _flutterfire_internals
+      sha256: ff0a84a2734d9e1089f8aedd5c0af0061b82fb94e95260d943404e0ef2134b11
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.3.59"
+  async:
+    dependency: transitive
+    description:
+      name: async
+      sha256: e2eb0491ba5ddb6177742d2da23904574082139b07c1e33b8503b9f46f3e1a37
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.13.1"
+  boolean_selector:
+    dependency: transitive
+    description:
+      name: boolean_selector
+      sha256: "8aab1771e1243a5063b8b0ff68042d67334e3feab9e95b9490f9a6ebf73b42ea"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.2"
+  characters:
+    dependency: transitive
+    description:
+      name: characters
+      sha256: faf38497bda5ead2a8c7615f4f7939df04333478bf32e4173fcb06d428b5716b
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.4.1"
+  clock:
+    dependency: transitive
+    description:
+      name: clock
+      sha256: e51d50bca3217c9a9fa2b41a30e4a38971133f5f9ec7a3d57bae095007f1d28e
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.3"
+  cloud_firestore:
+    dependency: "direct main"
+    description:
+      name: cloud_firestore
+      sha256: "2d33da4465bdb81b6685c41b535895065adcb16261beb398f5f3bbc623979e9c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.6.12"
+  cloud_firestore_platform_interface:
+    dependency: transitive
+    description:
+      name: cloud_firestore_platform_interface
+      sha256: "413c4e01895cf9cb3de36fa5c219479e06cd4722876274ace5dfc9f13ab2e39b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.6.12"
+  cloud_firestore_web:
+    dependency: transitive
+    description:
+      name: cloud_firestore_web
+      sha256: c1e30fc4a0fcedb08723fb4b1f12ee4e56d937cbf9deae1bda43cbb6367bb4cf
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.4.12"
+  collection:
+    dependency: transitive
+    description:
+      name: collection
+      sha256: "2f5709ae4d3d59dd8f7cd309b4e023046b57d8a6c82130785d2b0e5868084e76"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.19.1"
+  cupertino_icons:
+    dependency: "direct main"
+    description:
+      name: cupertino_icons
+      sha256: "41e005c33bd814be4d3096aff55b1908d419fde52ca656c8c47719ec745873cd"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.9"
+  fake_async:
+    dependency: transitive
+    description:
+      name: fake_async
+      sha256: "5368f224a74523e8d2e7399ea1638b37aecfca824a3cc4dfdf77bf1fa905ac44"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.3.3"
+  firebase_auth:
+    dependency: "direct main"
+    description:
+      name: firebase_auth
+      sha256: "0fed2133bee1369ee1118c1fef27b2ce0d84c54b7819a2b17dada5cfec3b03ff"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.7.0"
+  firebase_auth_platform_interface:
+    dependency: transitive
+    description:
+      name: firebase_auth_platform_interface
+      sha256: "871c9df4ec9a754d1a793f7eb42fa3b94249d464cfb19152ba93e14a5966b386"
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.7.3"
+  firebase_auth_web:
+    dependency: transitive
+    description:
+      name: firebase_auth_web
+      sha256: d9ada769c43261fd1b18decf113186e915c921a811bd5014f5ea08f4cf4bc57e
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.15.3"
+  firebase_core:
+    dependency: "direct main"
+    description:
+      name: firebase_core
+      sha256: "7be63a3f841fc9663342f7f3a011a42aef6a61066943c90b1c434d79d5c995c5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.15.2"
+  firebase_core_platform_interface:
+    dependency: transitive
+    description:
+      name: firebase_core_platform_interface
+      sha256: "0ecda14c1bfc9ed8cac303dd0f8d04a320811b479362a9a4efb14fd331a473ce"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.0.3"
+  firebase_core_web:
+    dependency: transitive
+    description:
+      name: firebase_core_web
+      sha256: "0ed0dc292e8f9ac50992e2394e9d336a0275b6ae400d64163fdf0a8a8b556c37"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.24.1"
+  flutter:
+    dependency: "direct main"
+    description: flutter
+    source: sdk
+    version: "0.0.0"
+  flutter_lints:
+    dependency: "direct dev"
+    description:
+      name: flutter_lints
+      sha256: "3105dc8492f6183fb076ccf1f351ac3d60564bff92e20bfc4af9cc1651f4e7e1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.0.0"
+  flutter_test:
+    dependency: "direct dev"
+    description: flutter
+    source: sdk
+    version: "0.0.0"
+  flutter_web_plugins:
+    dependency: transitive
+    description: flutter
+    source: sdk
+    version: "0.0.0"
+  http_parser:
+    dependency: transitive
+    description:
+      name: http_parser
+      sha256: "178d74305e7866013777bab2c3d8726205dc5a4dd935297175b19a23a2e66571"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.1.2"
+  intl:
+    dependency: "direct main"
+    description:
+      name: intl
+      sha256: "1ca20c894b1717686a2319b8548763d812bc0aabdac580420a44c5178c57a867"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.20.3"
+  leak_tracker:
+    dependency: transitive
+    description:
+      name: leak_tracker
+      sha256: "33e2e26bdd85a0112ec15400c8cbffea70d0f9c3407491f672a2fad47915e2de"
+      url: "https://pub.dev"
+    source: hosted
+    version: "11.0.2"
+  leak_tracker_flutter_testing:
+    dependency: transitive
+    description:
+      name: leak_tracker_flutter_testing
+      sha256: "1dbc140bb5a23c75ea9c4811222756104fbcd1a27173f0c34ca01e16bea473c1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.10"
+  leak_tracker_testing:
+    dependency: transitive
+    description:
+      name: leak_tracker_testing
+      sha256: "8d5a2d49f4a66b49744b23b018848400d23e54caf9463f4eb20df3eb8acb2eb1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.2"
+  lints:
+    dependency: transitive
+    description:
+      name: lints
+      sha256: "12f842a479589fea194fe5c5a3095abc7be0c1f2ddfa9a0e76aed1dbd26a87df"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.1.0"
+  matcher:
+    dependency: transitive
+    description:
+      name: matcher
+      sha256: "31bd099b47c10cd1aeb55146a2d46ce0277630ecef3f7dae54ad7873f36696cd"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.12.20"
+  material_color_utilities:
+    dependency: transitive
+    description:
+      name: material_color_utilities
+      sha256: "9c337007e82b1889149c82ed242ed1cb24a66044e30979c44912381e9be4c48b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.13.0"
+  meta:
+    dependency: transitive
+    description:
+      name: meta
+      sha256: c82594181e3312f3d0695fc95aaaf7758d75b8d4ae2bbecf223b9fd5109a059d
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.18.3"
+  path:
+    dependency: transitive
+    description:
+      name: path
+      sha256: "75cca69d1490965be98c73ceaea117e8a04dd21217b37b292c9ddbec0d955bc5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.9.1"
+  plugin_platform_interface:
+    dependency: transitive
+    description:
+      name: plugin_platform_interface
+      sha256: "4820fbfdb9478b1ebae27888254d445073732dae3d6ea81f0b7e06d5dedc3f02"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.8"
+  sky_engine:
+    dependency: transitive
+    description: flutter
+    source: sdk
+    version: "0.0.0"
+  source_span:
+    dependency: transitive
+    description:
+      name: source_span
+      sha256: "56a02f1f4cd1a2d96303c0144c93bd6d909eea6bee6bf5a0e0b685edbd4c47ab"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.10.2"
+  stack_trace:
+    dependency: transitive
+    description:
+      name: stack_trace
+      sha256: "277654b3034d17ac6f9f1cb5595db011b1d5d41e8806866db28e0abaa101c490"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.12.2"
+  stream_channel:
+    dependency: transitive
+    description:
+      name: stream_channel
+      sha256: "969e04c80b8bcdf826f8f16579c7b14d780458bd97f56d107d3950fdbeef059d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.4"
+  string_scanner:
+    dependency: transitive
+    description:
+      name: string_scanner
+      sha256: "921cd31725b72fe181906c6a94d987c78e3b98c2e205b397ea399d4054872b43"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.4.1"
+  term_glyph:
+    dependency: transitive
+    description:
+      name: term_glyph
+      sha256: "7f554798625ea768a7518313e58f83891c7f5024f88e46e7182a4558850a4b8e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.2"
+  test_api:
+    dependency: transitive
+    description:
+      name: test_api
+      sha256: "2a122cbe059f8b610d3a5415f42e255b6c17b1f21eee1d960f31080237fb4f11"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.7.12"
+  typed_data:
+    dependency: transitive
+    description:
+      name: typed_data
+      sha256: f9049c039ebfeb4cf7a7104a675823cd72dba8297f264b6637062516699fa006
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.4.0"
+  vector_math:
+    dependency: transitive
+    description:
+      name: vector_math
+      sha256: "1d774bbdf6b72a0b12122fc1560c9c2d2a67db5a4a4cc2bd8a5c990ab20e3188"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.4.0"
+  vm_service:
+    dependency: transitive
+    description:
+      name: vm_service
+      sha256: "89b11d62e1040ee681af3b4f1c97a803ecbf010c6e8b9c5896ee5b08c3bf7b78"
+      url: "https://pub.dev"
+    source: hosted
+    version: "15.4.0"
+  web:
+    dependency: transitive
+    description:
+      name: web
+      sha256: e119e82ac4795c7925103b7cf3768191f33941b99e7ccffbd6c645201d9f606b
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.2"
+sdks:
+  dart: ">=3.13.2 <4.0.0"
+  flutter: ">=3.22.0"
+</file>
+
+<file path=".github/workflows/ci.yml">
+name: CI
+
+on:
+  push:
+    branches: [qa, main]
+  pull_request:
+    branches: [qa, main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mis_finanzas
+    env:
+      FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+      FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+      FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+      FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+      FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+      FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run Flutter Analyze (Ignoring Warnings & Infos)
+        run: |
+          # Añadimos '|| true' para evitar que el exit code 1 de flutter analyze rompa el script de inmediato
+          output=$(flutter analyze --no-pub || true)
+          echo "$output"
+          
+          if echo "$output" | grep -q "error •"; then
+            echo "❌ Se encontraron errores fatales en el análisis."
+            exit 1
+          else
+            echo "✅ No hay errores fatales. Warnings e infos omitidos para continuar el CI."
+            exit 0
+          fi
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build Web Release
+        run: >
+          flutter build web --release
+          --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY
+          --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID
+          --dart-define=FIREBASE_MESSAGING_SENDER_ID=$FIREBASE_MESSAGING_SENDER_ID
+          --dart-define=FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID
+          --dart-define=FIREBASE_AUTH_DOMAIN=$FIREBASE_AUTH_DOMAIN
+          --dart-define=FIREBASE_STORAGE_BUCKET=$FIREBASE_STORAGE_BUCKET
+</file>
+
+<file path="mis_finanzas/pubspec.yaml">
+name: mis_finanzas
+description: "A new Flutter project."
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the builder number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+# In Windows, build-name is used as the major, minor, and patch parts
+# of the product and file versions while build-number is used as the build suffix.
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.2
+
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+  firebase_core: ^3.0.0 # o la versión más reciente
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.8
+  cloud_firestore: ^5.6.12
+  firebase_auth: ^5.7.0
+  intl: ^0.20.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # The "flutter_lints" package below contains a set of recommended lints to
+  # encourage good coding practices. The lint set provided by the package is
+  # activated in the `analysis_options.yaml` file located at the root of your
+  # package. See that file for information about deactivating specific lint
+  # rules and activating additional ones.
+  flutter_lints: ^6.0.0
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  # To add assets to your application, add an assets section, like this:
+  # assets:
+  #   - images/a_dot_burr.jpeg
+  #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/mascota/
+
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/to/resolution-aware-images
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/to/asset-from-package
+
+  # To add custom fonts to your application, add a fonts section here,
+  # in this "flutter" section. Each entry in this list should have a
+  # "family" key with the font family name, and a "fonts" key with a
+  # list giving the asset and other descriptors for the font. For
+  # example:
+  # fonts:
+  #   - family: Schyler
+  #     fonts:
+  #       - asset: fonts/Schyler-Regular.ttf
+  #       - asset: fonts/Schyler-Italic.ttf
+  #         style: italic
+  #   - family: Trajan Pro
+  #     fonts:
+  #       - asset: fonts/TrajanPro.ttf
+  #       - asset: fonts/TrajanPro_Bold.ttf
+  #         weight: 700
+  #
+  # For details regarding fonts from package dependencies,
+  # see https://flutter.dev/to/font-from-package
+</file>
+
+<file path="mis_finanzas/lib/main.dart">
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
+
+import 'dart:ui' show PointerDeviceKind;
+
+import 'firebase_options.dart';
+import 'screens/auth_gate.dart';
+import 'theme/tema.dart';
+
+class _ScrollWeb extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+      };
+}
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Debe ejecutarse antes de cualquier otra operación con Firestore.
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
+
+  await initializeDateFormatting('es');
+
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Mis Finanzas',
+      debugShowCheckedModeBanner: false,
+      scrollBehavior: _ScrollWeb(),
+      theme: construirTema(),
+      themeMode: ThemeMode.dark,
+      home: const AuthGate(),
+    );
+  }
+}
+</file>
+
+</files>

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/transaccion.dart';
 import '../services/finanzas_repo.dart';
+import '../theme/paleta.dart';
 import '../utils/analisis.dart';
 import '../utils/formato.dart';
 import 'mascota.dart';
@@ -51,20 +52,59 @@ class _FormularioState extends State<_Formulario> {
     return base.contains(_categoria) ? base : [...base, _categoria];
   }
 
-  List<(String, String)> get _cuentas {
+  List<_OpcionCuenta> get _opcionesEfectivo => [
+        _OpcionCuenta(
+          id: cuentaEfectivo,
+          nombre: 'Efectivo',
+          detalle: formatoUsd(widget.repo.balanceEfectivo),
+          icono: Icons.payments_outlined,
+        ),
+      ];
+
+  List<_OpcionCuenta> get _opcionesCuentas {
     final l = [
-      (cuentaEfectivo, 'Efectivo'),
-      for (final t in widget.repo.tarjetas) (t.id, t.nombre),
+      for (final c in widget.repo.cuentas)
+        _OpcionCuenta(
+          id: c.id,
+          nombre: c.nombre,
+          detalle: formatoUsd(widget.repo.saldoCuenta(c.id)),
+          icono: c.esDebito
+              ? Icons.credit_card_outlined
+              : Icons.account_balance_outlined,
+        ),
     ];
-    if (!l.any((c) => c.$1 == _cuentaId)) {
-      l.add((_cuentaId, widget.repo.nombreCuenta(_cuentaId)));
+    if (_cuentaId != cuentaEfectivo &&
+        !widget.repo.esCuentaBancaria(_cuentaId) &&
+        !widget.repo.esTarjetaCredito(_cuentaId)) {
+      l.add(_OpcionCuenta(
+        id: _cuentaId,
+        nombre: widget.repo.nombreCuenta(_cuentaId),
+        detalle: 'Cuenta no disponible',
+        icono: Icons.help_outline,
+      ));
     }
     return l;
   }
 
+  List<_OpcionCuenta> get _opcionesTarjetas => [
+        if (_tipo == TipoTransaccion.gasto)
+          for (final t in widget.repo.tarjetas)
+            _OpcionCuenta(
+              id: t.id,
+              nombre: t.nombre,
+              detalle:
+                  '${formatoUsd(widget.repo.restanteTarjeta(t.id))} restante',
+              icono: Icons.credit_card,
+            ),
+      ];
+
   @override
   void initState() {
     super.initState();
+    if (_tipo == TipoTransaccion.ingreso &&
+        widget.repo.esTarjetaCredito(_cuentaId)) {
+      _cuentaId = cuentaEfectivo;
+    }
     _monto.addListener(() => setState(() {}));
   }
 
@@ -78,9 +118,11 @@ class _FormularioState extends State<_Formulario> {
   /// Contra qué se compara el monto para la reacción de la mascota.
   int _referencia() {
     final repo = widget.repo;
-    var ref = _cuentaId == cuentaEfectivo
-        ? repo.balanceEfectivo
-        : repo.restanteTarjeta(_cuentaId);
+    var ref = switch (_cuentaId) {
+      cuentaEfectivo => repo.balanceEfectivo,
+      _ when repo.esCuentaBancaria(_cuentaId) => repo.saldoCuenta(_cuentaId),
+      _ => repo.restanteTarjeta(_cuentaId),
+    };
     final o = widget.inicial;
     if (o != null && o.tipo == TipoTransaccion.gasto && o.cuentaId == _cuentaId) {
       ref += o.montoCentavos; // al editar, el gasto original ya estaba descontado
@@ -91,9 +133,40 @@ class _FormularioState extends State<_Formulario> {
   String _pista() {
     final repo = widget.repo;
     if (_cuentaId == cuentaEfectivo) {
+      if (_tipo == TipoTransaccion.ingreso) return 'Se sumará al efectivo.';
       return 'Efectivo libre: ${formatoUsd(repo.balanceEfectivo - repo.ahorroTotal)}';
     }
+    if (repo.esCuentaBancaria(_cuentaId)) {
+      if (_tipo == TipoTransaccion.ingreso) {
+        return 'Se sumará al saldo acumulado de esta cuenta.';
+      }
+      return 'Saldo disponible en esta cuenta: ${formatoUsd(repo.saldoCuenta(_cuentaId))}';
+    }
     return 'Restante en esta tarjeta este mes: ${formatoUsd(repo.restanteTarjeta(_cuentaId))}';
+  }
+
+  Widget _grupoCuentas(String titulo, List<_OpcionCuenta> opciones) {
+    if (opciones.isEmpty) return const SizedBox.shrink();
+    final tema = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(titulo,
+            style: tema.textTheme.labelSmall?.copyWith(
+                color: tema.colorScheme.outline,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5)),
+        const SizedBox(height: 6),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final o in opciones)
+            _OpcionCuentaWidget(
+              opcion: o,
+              seleccionada: _cuentaId == o.id,
+              onTap: () => setState(() => _cuentaId = o.id),
+            ),
+        ]),
+      ]),
+    );
   }
 
   Future<void> _elegirFecha() async {
@@ -118,7 +191,7 @@ class _FormularioState extends State<_Formulario> {
       categoria: _categoria,
       descripcion: _descripcion.text.trim(),
       fecha: _fecha,
-      cuentaId: _tipo == TipoTransaccion.ingreso ? cuentaEfectivo : _cuentaId,
+      cuentaId: _cuentaId,
     );
     // Sin await: offline el Future no se completa, pero el stream ya refleja el cambio.
     if (base == null) {
@@ -168,6 +241,10 @@ class _FormularioState extends State<_Formulario> {
                 onSelectionChanged: (s) => setState(() {
                   _tipo = s.first;
                   _categoria = _categorias.first;
+                  if (_tipo == TipoTransaccion.ingreso &&
+                      widget.repo.esTarjetaCredito(_cuentaId)) {
+                    _cuentaId = cuentaEfectivo;
+                  }
                 }),
               ),
               const SizedBox(height: 20),
@@ -193,28 +270,20 @@ class _FormularioState extends State<_Formulario> {
                     onSelected: (_) => setState(() => _categoria = c),
                   ),
               ]),
-              if (_tipo == TipoTransaccion.gasto) ...[
-                const SizedBox(height: 16),
-                Text('Pagar con',
-                    style: tema.textTheme.labelLarge
-                        ?.copyWith(color: tema.colorScheme.outline)),
-                const SizedBox(height: 8),
-                Wrap(spacing: 8, runSpacing: 4, children: [
-                  for (final (id, nombre) in _cuentas)
-                    ChoiceChip(
-                      avatar: Icon(
-                          id == cuentaEfectivo ? Icons.payments_outlined : Icons.credit_card,
-                          size: 16),
-                      label: Text(nombre),
-                      selected: _cuentaId == id,
-                      onSelected: (_) => setState(() => _cuentaId = id),
-                    ),
-                ]),
-                const SizedBox(height: 6),
-                Text(_pista(),
-                    style: tema.textTheme.bodySmall
-                        ?.copyWith(color: tema.colorScheme.outline)),
-              ],
+              const SizedBox(height: 16),
+              Text(
+                  _tipo == TipoTransaccion.gasto
+                      ? 'Pagar con'
+                      : 'Depositar en',
+                  style: tema.textTheme.labelLarge
+                      ?.copyWith(color: tema.colorScheme.outline)),
+              const SizedBox(height: 8),
+              _grupoCuentas('Efectivo', _opcionesEfectivo),
+              _grupoCuentas('Cuentas y Débito', _opcionesCuentas),
+              _grupoCuentas('Tarjetas de Crédito', _opcionesTarjetas),
+              Text(_pista(),
+                  style: tema.textTheme.bodySmall
+                      ?.copyWith(color: tema.colorScheme.outline)),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _descripcion,
@@ -235,6 +304,82 @@ class _FormularioState extends State<_Formulario> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OpcionCuenta {
+  const _OpcionCuenta({
+    required this.id,
+    required this.nombre,
+    required this.detalle,
+    required this.icono,
+  });
+  final String id;
+  final String nombre;
+  final String detalle;
+  final IconData icono;
+}
+
+class _OpcionCuentaWidget extends StatelessWidget {
+  const _OpcionCuentaWidget({
+    required this.opcion,
+    required this.seleccionada,
+    required this.onTap,
+  });
+  final _OpcionCuenta opcion;
+  final bool seleccionada;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final color = seleccionada ? Paleta.esmeralda : tema.colorScheme.outline;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          constraints: const BoxConstraints(maxWidth: 240),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          decoration: BoxDecoration(
+            color: seleccionada
+                ? Paleta.esmeralda.withValues(alpha: 0.13)
+                : Colors.white.withValues(alpha: 0.03),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: seleccionada
+                  ? Paleta.esmeralda.withValues(alpha: 0.65)
+                  : Colors.white12,
+            ),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(opcion.icono, size: 18, color: color),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(opcion.nombre,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: tema.textTheme.labelLarge?.copyWith(
+                            fontWeight: seleccionada
+                                ? FontWeight.w700
+                                : FontWeight.w500)),
+                    Text(opcion.detalle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: tema.textTheme.bodySmall
+                            ?.copyWith(color: tema.colorScheme.outline)),
+                  ]),
+            ),
+          ]),
         ),
       ),
     );

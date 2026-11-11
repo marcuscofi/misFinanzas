@@ -62,12 +62,15 @@ class SemanaCard extends StatelessWidget {
         const Divider(height: 24, color: Colors.white12),
         Wrap(spacing: 20, runSpacing: 8, children: [
           _Dato('Efectivo libre', formatoUsd(s.efectivoLibre)),
+          _Dato('Cuentas y débito', formatoUsd(s.cuentasRestante)),
           _Dato('Tarjetas (mes)', formatoUsd(s.tarjetasRestante)),
           _Dato('Ahorro apartado', formatoUsd(s.ahorroApartado)),
         ]),
         const SizedBox(height: 8),
         Text(
-          'Se reparte entre ${s.semanasRestantes} ${s.semanasRestantes == 1 ? 'semana' : 'semanas'} que quedan del mes.',
+          s.semanasRestantes == 1
+              ? 'Se reparte para la última semana del mes.'
+              : 'Se reparte para las otras ${s.semanasRestantes} semanas restantes.',
           style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.outline),
         ),
       ]),

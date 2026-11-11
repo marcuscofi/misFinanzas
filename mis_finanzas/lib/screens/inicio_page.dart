@@ -70,7 +70,7 @@ class _InicioPageState extends State<InicioPage> {
     final movs = widget.repo.lote.items;
     final r = analizar(movs, _periodo, DateTime.now());
     final lectura = evaluarMascota(
-        balance: widget.repo.balanceEfectivo, r: r, hayDatos: movs.isNotEmpty);
+        balance: widget.repo.liquidoTotal, r: r, hayDatos: movs.isNotEmpty);
 
     final izq = <Widget>[
       _cabecera(),
@@ -165,7 +165,7 @@ class _InicioPageState extends State<InicioPage> {
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: Text(formatoUsd(widget.repo.balanceEfectivo),
+              child: Text(formatoUsd(widget.repo.liquidoTotal),
                   style: tema.textTheme.displaySmall
                       ?.copyWith(fontWeight: FontWeight.w800)),
             ),
