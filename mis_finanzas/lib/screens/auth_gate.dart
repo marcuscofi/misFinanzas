@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import 'dashboard_page.dart';
 import 'login_page.dart';
+import 'home_shell.dart';
 
 /// Decide qué pantalla mostrar según el estado de la sesión.
 /// En web, Firebase Auth conserva la sesión (persistencia local) por defecto.
@@ -20,7 +20,7 @@ class AuthGate extends StatelessWidget {
         final user = snapshot.data;
         if (user == null) return const LoginPage();
         // La key fuerza a recrear el dashboard si cambia el usuario.
-        return DashboardPage(key: ValueKey(user.uid), user: user);
+        return HomeShell(key: ValueKey(user.uid), user: user);
       },
     );
   }
