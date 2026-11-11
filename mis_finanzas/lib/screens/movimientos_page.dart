@@ -121,7 +121,7 @@ class _MovimientosPageState extends State<MovimientosPage> {
                         context, widget.repo.transacciones, t, confirmar: false),
                     child: MovimientoTile(
                       t: t,
-                      cuenta: t.tipo == TipoTransaccion.gasto ? widget.repo.nombreCuenta(t.cuentaId) : null,
+                      cuenta: t.cuentaId == cuentaEfectivo ? null : widget.repo.nombreCuenta(t.cuentaId),
                       onTap: () => mostrarFormularioTransaccion(context, widget.repo, inicial: t),
                       onEliminar: () => eliminarTransaccion(
                           context, widget.repo.transacciones, t, confirmar: true),

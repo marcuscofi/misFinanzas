@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../models/transaccion.dart';
@@ -194,12 +195,20 @@ class _FormularioState extends State<_Formulario> {
       cuentaId: _cuentaId,
     );
     // Sin await: offline el Future no se completa, pero el stream ya refleja el cambio.
-    if (base == null) {
-      widget.repo.transacciones.agregar(t);
-    } else {
-      widget.repo.transacciones.actualizar(t);
-    }
+    final Future<void> guardado = base == null
+        ? widget.repo.transacciones.agregar(t)
+        : widget.repo.transacciones.actualizar(t);
+    final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
+    guardado.catchError((Object e) {
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(SnackBar(
+          content: Text(e is FirebaseException && e.code == 'permission-denied'
+              ? 'No se pudo guardar: permisos insuficientes en Firestore.'
+              : 'No se pudo guardar el movimiento. Revisa tu conexión.'),
+        ));
+    });
   }
 
   @override

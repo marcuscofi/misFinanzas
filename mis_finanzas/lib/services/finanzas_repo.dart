@@ -97,9 +97,13 @@ class FinanzasRepo extends ChangeNotifier {
 
   String nombreCuenta(String id) {
     if (id == cuentaEfectivo) return 'Efectivo';
+    final tarjeta = _tarjetas!.where((t) => t.id == id).firstOrNull;
+    if (tarjeta != null) return tarjeta.nombre;
     final cuenta = _cuentas!.where((c) => c.id == id).firstOrNull;
-    if (cuenta != null) return cuenta.nombre;
-    return _tarjetas!.where((t) => t.id == id).firstOrNull?.nombre ??
-        'Cuenta eliminada';
+    if (cuenta != null) {
+      final alias = cuenta.alias.trim();
+      return alias.isEmpty ? cuenta.banco : '${cuenta.banco} · $alias';
+    }
+    return 'Cuenta eliminada';
   }
 }

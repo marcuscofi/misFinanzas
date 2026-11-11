@@ -58,5 +58,23 @@ void main() {
       expect(s.gastado, 20000);
       expect(s.asignacion, 100000 ~/ s.semanasRestantes);
     });
+
+    test('calcula los bloques de semanas que quedan del mes', () {
+      final medioMes = calcularSemana(
+        movs: const [],
+        tarjetas: const [],
+        planes: const [],
+        ahora: DateTime(2026, 11, 10),
+      );
+      expect(medioMes.semanasRestantes, 2);
+
+      final ultimosDias = calcularSemana(
+        movs: const [],
+        tarjetas: const [],
+        planes: const [],
+        ahora: DateTime(2026, 11, 24),
+      );
+      expect(ultimosDias.semanasRestantes, 1);
+    });
   });
 }

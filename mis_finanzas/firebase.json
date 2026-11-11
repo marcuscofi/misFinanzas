@@ -1,1 +1,17 @@
-{"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"misgastos-1291c","configurations":{"web":"1:70807927015:web:1069556e1e09de5bc50a42"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "misgastos-1291c",
+          "configurations": {
+            "web": "1:70807927015:web:1069556e1e09de5bc50a42"
+          }
+        }
+      }
+    }
+  }
+}
