@@ -1,42 +1,50 @@
 import 'package:flutter/material.dart';
-
 import '../models/transaccion.dart';
 import '../services/transacciones_service.dart';
+import '../utils/analisis.dart';
 import '../utils/formato.dart';
+import 'mascota.dart';
 
 Future<void> mostrarFormularioTransaccion(
   BuildContext context,
-  TransaccionesService service,
-) {
+  TransaccionesService service, {
+  required int balanceCentavos,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    builder: (_) => _FormularioTransaccion(service: service),
+    constraints: const BoxConstraints(maxWidth: 520),
+    builder: (_) => _Formulario(service: service, balance: balanceCentavos),
   );
 }
 
-class _FormularioTransaccion extends StatefulWidget {
-  const _FormularioTransaccion({required this.service});
+class _Formulario extends StatefulWidget {
+  const _Formulario({required this.service, required this.balance});
   final TransaccionesService service;
+  final int balance;
 
   @override
-  State<_FormularioTransaccion> createState() => _FormularioTransaccionState();
+  State<_Formulario> createState() => _FormularioState();
 }
 
-class _FormularioTransaccionState extends State<_FormularioTransaccion> {
+class _FormularioState extends State<_Formulario> {
   final _formKey = GlobalKey<FormState>();
   final _monto = TextEditingController();
   final _descripcion = TextEditingController();
-
   TipoTransaccion _tipo = TipoTransaccion.gasto;
   String _categoria = categoriasGasto.first;
   DateTime _fecha = DateTime.now();
 
-  List<String> get _categorias => _tipo == TipoTransaccion.gasto
-      ? categoriasGasto
-      : categoriasIngreso;
+  List<String> get _categorias =>
+      _tipo == TipoTransaccion.gasto ? categoriasGasto : categoriasIngreso;
+
+  @override
+  void initState() {
+    super.initState();
+    _monto.addListener(() => setState(() {})); // la mascota reacciona al escribir
+  }
 
   @override
   void dispose() {
@@ -58,12 +66,8 @@ class _FormularioTransaccionState extends State<_FormularioTransaccion> {
 
   void _guardar() {
     if (!_formKey.currentState!.validate()) return;
-    final centavos = parseCentavos(_monto.text)!;
-
-    // Sin await: offline el Future no se completa hasta sincronizar,
-    // pero el stream ya muestra el movimiento localmente.
     widget.service.agregar(Transaccion(
-      montoCentavos: centavos,
+      montoCentavos: parseCentavos(_monto.text)!,
       tipo: _tipo,
       categoria: _categoria,
       descripcion: _descripcion.text.trim(),
@@ -74,6 +78,12 @@ class _FormularioTransaccionState extends State<_FormularioTransaccion> {
 
   @override
   Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final lectura = reaccionAlMonto(
+      tipo: _tipo,
+      centavos: parseCentavos(_monto.text) ?? 0,
+      balance: widget.balance,
+    );
     return Padding(
       padding: EdgeInsets.fromLTRB(
           20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 20),
@@ -84,6 +94,13 @@ class _FormularioTransaccionState extends State<_FormularioTransaccion> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Row(children: [
+                Mascota(lectura.estado, tamano: 84),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: Text(lectura.mensaje, style: tema.textTheme.bodyLarge)),
+              ]),
+              const SizedBox(height: 12),
               SegmentedButton<TipoTransaccion>(
                 segments: const [
                   ButtonSegment(
@@ -107,12 +124,8 @@ class _FormularioTransaccionState extends State<_FormularioTransaccion> {
                 autofocus: true,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                style: Theme.of(context).textTheme.headlineMedium,
-                decoration: const InputDecoration(
-                  prefixText: r'$ ',
-                  hintText: '0.00',
-                  border: OutlineInputBorder(),
-                ),
+                style: tema.textTheme.headlineMedium,
+                decoration: const InputDecoration(prefixText: r'$ ', hintText: '0.00'),
                 validator: (v) {
                   final c = parseCentavos(v ?? '');
                   if (c == null) return 'Monto inválido';
@@ -121,26 +134,20 @@ class _FormularioTransaccionState extends State<_FormularioTransaccion> {
                 },
               ),
               const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: [
-                  for (final c in _categorias)
-                    ChoiceChip(
-                      label: Text(c),
-                      selected: _categoria == c,
-                      onSelected: (_) => setState(() => _categoria = c),
-                    ),
-                ],
-              ),
+              Wrap(spacing: 8, runSpacing: 4, children: [
+                for (final c in _categorias)
+                  ChoiceChip(
+                    label: Text(c),
+                    selected: _categoria == c,
+                    onSelected: (_) => setState(() => _categoria = c),
+                  ),
+              ]),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _descripcion,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Descripción (opcional)',
-                  border: OutlineInputBorder(),
-                ),
+                decoration:
+                    const InputDecoration(labelText: 'Descripción (opcional)'),
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(

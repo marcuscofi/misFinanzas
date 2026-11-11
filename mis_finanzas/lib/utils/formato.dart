@@ -7,6 +7,7 @@ String formatoUsd(int centavos) => _usd.format(centavos / 100);
 
 final _fechaLarga = DateFormat("EEEE d 'de' MMMM", 'es');
 final _fechaCorta = DateFormat('d MMM yyyy', 'es');
+final _fechaMuyCorta = DateFormat('d MMM', 'es');
 
 String fechaLarga(DateTime d) {
   final s = _fechaLarga.format(d);
@@ -14,6 +15,8 @@ String fechaLarga(DateTime d) {
 }
 
 String fechaCorta(DateTime d) => _fechaCorta.format(d);
+
+String fechaMuyCorta(DateTime d) => _fechaMuyCorta.format(d);
 
 /// Convierte "12.5" o "12,50" a centavos. Devuelve null si no es válido.
 int? parseCentavos(String texto) {
