@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'firebase_options.dart';
+import 'screens/auth_gate.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +19,8 @@ Future<void> main() async {
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
 
+  await initializeDateFormatting('es');
+
   runApp(const MyApp());
 }
 
@@ -28,13 +32,18 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Mis Finanzas',
       debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.system,
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.teal,
+        brightness: Brightness.light,
       ),
-      home: const Scaffold(
-        body: Center(child: Text('¡Firebase conectado en Flutter con éxito!')),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.teal,
+        brightness: Brightness.dark,
       ),
+      home: const AuthGate(),
     );
   }
 }
