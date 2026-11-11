@@ -39,7 +39,7 @@ class MovimientoTile extends StatelessWidget {
       onTap: onTap,
       subtitle: Text([
         t.categoria,
-        if (cuenta != null) cuenta!,
+        ?cuenta,
         if (mostrarFecha) fechaCorta(t.fecha),
       ].join(' · ')),
       leading: Container(

@@ -104,7 +104,7 @@ class _InicioPageState extends State<InicioPage> {
           mostrarFecha: true,
           onEliminar: () =>
               eliminarTransaccion(context, widget.repo.transacciones, t, confirmar: true),
-          cuenta: t.tipo == TipoTransaccion.gasto ? widget.repo.nombreCuenta(t.cuentaId) : null,
+          cuenta: t.cuentaId == cuentaEfectivo ? null : widget.repo.nombreCuenta(t.cuentaId),
           onTap: () => mostrarFormularioTransaccion(context, widget.repo, inicial: t),
         ),
     ];
