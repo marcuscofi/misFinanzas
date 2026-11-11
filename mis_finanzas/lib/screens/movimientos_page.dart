@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../models/transaccion.dart';
 import '../services/transacciones_service.dart';
+import '../services/finanzas_repo.dart';
 import '../utils/formato.dart';
 import '../widgets/acciones_transaccion.dart';
 import '../widgets/mascota.dart';
+import '../widgets/formulario_transaccion.dart';
 import '../models/estado_mascota.dart';
 import '../widgets/movimiento_tile.dart';
 import '../widgets/sync_chip.dart';
 
 class MovimientosPage extends StatefulWidget {
-  const MovimientosPage({super.key, required this.lote, required this.service});
-  final LoteTransacciones lote;
-  final TransaccionesService service;
+  const MovimientosPage({super.key, required this.repo});
+  final FinanzasRepo repo;
   @override
   State<MovimientosPage> createState() => _MovimientosPageState();
 }
@@ -23,7 +24,7 @@ class _MovimientosPageState extends State<MovimientosPage> {
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
-    final lista = widget.lote.items.where((t) {
+    final lista = widget.repo.lote.items.where((t) {
       if (_filtro == 1) return t.tipo == TipoTransaccion.gasto;
       if (_filtro == 2) return t.tipo == TipoTransaccion.ingreso;
       return true;
@@ -56,12 +57,12 @@ class _MovimientosPageState extends State<MovimientosPage> {
                           style: tema.textTheme.headlineSmall
                               ?.copyWith(fontWeight: FontWeight.w800)),
                     ),
-                    SyncChip(lote: widget.lote),
+                    SyncChip(lote: widget.repo.lote),
                     if (modoPruebas)
                       PopupMenuButton<String>(
                         onSelected: (v) {
-                          if (v == 'gen') widget.service.generarPrueba(50);
-                          if (v == 'del') widget.service.borrarPrueba();
+                          if (v == 'gen') widget.repo.transacciones.generarPrueba(50);
+                          if (v == 'del') widget.repo.transacciones.borrarPrueba();
                         },
                         itemBuilder: (_) => const [
                           PopupMenuItem(value: 'gen', child: Text('Generar 50 de prueba')),
@@ -117,11 +118,13 @@ class _MovimientosPageState extends State<MovimientosPage> {
                       child: Icon(Icons.delete_outline, color: tema.colorScheme.error),
                     ),
                     onDismissed: (_) => eliminarTransaccion(
-                        context, widget.service, t, confirmar: false),
+                        context, widget.repo.transacciones, t, confirmar: false),
                     child: MovimientoTile(
                       t: t,
+                      cuenta: t.tipo == TipoTransaccion.gasto ? widget.repo.nombreCuenta(t.cuentaId) : null,
+                      onTap: () => mostrarFormularioTransaccion(context, widget.repo, inicial: t),
                       onEliminar: () => eliminarTransaccion(
-                          context, widget.service, t, confirmar: true),
+                          context, widget.repo.transacciones, t, confirmar: true),
                     ),
                   );
                 },

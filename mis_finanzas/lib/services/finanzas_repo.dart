@@ -1,0 +1,79 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+
+import '../models/plan_ahorro.dart';
+import '../models/tarjeta.dart';
+import '../models/transaccion.dart';
+import '../utils/presupuesto.dart';
+import 'planes_service.dart';
+import 'tarjetas_service.dart';
+import 'transacciones_service.dart';
+
+class FinanzasRepo extends ChangeNotifier {
+  FinanzasRepo(String uid)
+      : transacciones = TransaccionesService(uid),
+        tarjetasSvc = TarjetasService(uid),
+        planesSvc = PlanesService(uid) {
+    _subs = [
+      transacciones.observar().listen((v) {
+        _lote = v;
+        notifyListeners();
+      }, onError: _fallo),
+      tarjetasSvc.observar().listen((v) {
+        _tarjetas = v;
+        notifyListeners();
+      }, onError: _fallo),
+      planesSvc.observar().listen((v) {
+        _planes = v;
+        notifyListeners();
+      }, onError: _fallo),
+    ];
+  }
+
+  final TransaccionesService transacciones;
+  final TarjetasService tarjetasSvc;
+  final PlanesService planesSvc;
+  late final List<StreamSubscription<dynamic>> _subs;
+
+  LoteTransacciones? _lote;
+  List<Tarjeta>? _tarjetas;
+  List<PlanAhorro>? _planes;
+  Object? error;
+
+  void _fallo(Object e) {
+    error = e;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    for (final s in _subs) {
+      s.cancel();
+    }
+    super.dispose();
+  }
+
+  bool get listo => _lote != null && _tarjetas != null && _planes != null;
+  LoteTransacciones get lote => _lote!;
+  List<PlanAhorro> get planes => _planes!;
+  List<Tarjeta> get tarjetas => _tarjetas!.where((t) => t.activa).toList();
+  List<Tarjeta> get archivadas => _tarjetas!.where((t) => !t.activa).toList();
+
+  // ---- Derivados (datos chicos: se recalculan al leerlos) ----
+  int get balanceEfectivo => calcularBalanceEfectivo(lote.items);
+  List<EstadoTarjeta> get estadosTarjetas =>
+      estadoTarjetas(lote.items, tarjetas, DateTime.now());
+  int restanteTarjeta(String id) =>
+      estadosTarjetas.where((e) => e.tarjeta.id == id).map((e) => e.restante).firstOrNull ?? 0;
+  int ahorroDe(PlanAhorro p) => ahorroPlan(p, lote.items, DateTime.now());
+  int get ahorroTotal => planes.fold(0, (a, p) => a + ahorroDe(p));
+  PresupuestoSemanal get semana => calcularSemana(
+      movs: lote.items, tarjetas: tarjetas, planes: planes, ahora: DateTime.now());
+
+  String nombreCuenta(String id) {
+    if (id == cuentaEfectivo) return 'Efectivo';
+    return _tarjetas!.where((t) => t.id == id).firstOrNull?.nombre ??
+        'Tarjeta eliminada';
+  }
+}
