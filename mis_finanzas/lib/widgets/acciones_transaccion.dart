@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/transaccion.dart';
 import '../services/transacciones_service.dart';
 import '../utils/formato.dart';
@@ -17,14 +18,17 @@ Future<void> eliminarTransaccion(
       builder: (ctx) => AlertDialog(
         title: const Text('¿Eliminar movimiento?'),
         content: Text(
-            '${t.descripcion.isEmpty ? t.categoria : t.descripcion} · ${formatoUsd(t.montoCentavos)}'),
+          '${t.descripcion.isEmpty ? t.categoria : t.descripcion} · ${formatoUsd(t.montoCentavos)}',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Eliminar')),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar'),
+          ),
         ],
       ),
     );
@@ -33,9 +37,13 @@ Future<void> eliminarTransaccion(
   service.eliminar(t.id); // sin await: funciona igual offline
   ScaffoldMessenger.of(context)
     ..clearSnackBars()
-    ..showSnackBar(SnackBar(
-      content: const Text('Movimiento eliminado'),
-      action: SnackBarAction(
-          label: 'Deshacer', onPressed: () => service.agregar(t)),
-    ));
+    ..showSnackBar(
+      SnackBar(
+        content: const Text('Movimiento eliminado'),
+        action: SnackBarAction(
+          label: 'Deshacer',
+          onPressed: () => service.agregar(t),
+        ),
+      ),
+    );
 }

@@ -9,9 +9,11 @@ DateTime _restarMeses(DateTime d, int m) {
   return DateTime(y, mes, d.day > ultimo ? ultimo : d.day);
 }
 
-int _dias(DateTime a, DateTime b) => DateTime.utc(b.year, b.month, b.day)
-    .difference(DateTime.utc(a.year, a.month, a.day))
-    .inDays;
+int _dias(DateTime a, DateTime b) => DateTime.utc(
+  b.year,
+  b.month,
+  b.day,
+).difference(DateTime.utc(a.year, a.month, a.day)).inDays;
 
 /// Ventana de tiempo: N días o N meses hacia atrás desde hoy.
 class Periodo {
@@ -38,7 +40,8 @@ class Periodo {
       : DateTime(inicio.year, inicio.month, inicio.day - dias);
 
   @override
-  bool operator ==(Object o) => o is Periodo && o.dias == dias && o.meses == meses;
+  bool operator ==(Object other) =>
+      other is Periodo && other.dias == dias && other.meses == meses;
   @override
   int get hashCode => Object.hash(dias, meses);
 }
@@ -94,8 +97,13 @@ ResumenPeriodo analizar(List<Transaccion> movs, Periodo p, DateTime ahora) {
   }
 
   return ResumenPeriodo(
-    inicio: inicio, hoy: hoy, gastos: gastos, ingresos: ingresos,
-    gastosPrevios: gastosPrev, serie: serie, seriePrev: prev,
+    inicio: inicio,
+    hoy: hoy,
+    gastos: gastos,
+    ingresos: ingresos,
+    gastosPrevios: gastosPrev,
+    serie: serie,
+    seriePrev: prev,
   );
 }
 
@@ -115,44 +123,70 @@ Lectura evaluarMascota({
   required bool hayDatos,
 }) {
   if (!hayDatos) {
-    return const Lectura(EstadoMascota.escritorio,
-        'Registra tu primer movimiento y arrancamos.', Tono.neutro);
+    return const Lectura(
+      EstadoMascota.escritorio,
+      'Registra tu primer movimiento y arrancamos.',
+      Tono.neutro,
+    );
   }
   if (balance < 0) {
-    return const Lectura(EstadoMascota.panico,
-        'Tu balance está en negativo. ¡Hay que frenar!', Tono.alerta);
+    return const Lectura(
+      EstadoMascota.panico,
+      'Tu balance está en negativo. ¡Hay que frenar!',
+      Tono.alerta,
+    );
   }
   final v = r.variacion;
   if (r.ingresos > 0 && r.gastos > r.ingresos) {
-    return const Lectura(EstadoMascota.sudando,
-        'Gastaste más de lo que ingresó en este periodo.', Tono.alerta);
+    return const Lectura(
+      EstadoMascota.sudando,
+      'Gastaste más de lo que ingresó en este periodo.',
+      Tono.alerta,
+    );
   }
   if (v != null && v > 0.25) {
-    return Lectura(EstadoMascota.preocupado,
-        'Tus gastos subieron ${(v * 100).round()} % frente al periodo anterior.',
-        Tono.alerta);
+    return Lectura(
+      EstadoMascota.preocupado,
+      'Tus gastos subieron ${(v * 100).round()} % frente al periodo anterior.',
+      Tono.alerta,
+    );
   }
   if (r.ingresos > 0) {
     final tasa = (r.ingresos - r.gastos) / r.ingresos;
     if (tasa >= 0.5) {
-      return const Lectura(EstadoMascota.celebra,
-          'Ahorras más de la mitad de lo que ganas. ¡Brutal!', Tono.positivo);
+      return const Lectura(
+        EstadoMascota.celebra,
+        'Ahorras más de la mitad de lo que ganas. ¡Brutal!',
+        Tono.positivo,
+      );
     }
     if (tasa >= 0.3) {
-      return const Lectura(EstadoMascota.meta,
-          'Vas rumbo a tu meta de ahorro.', Tono.positivo);
+      return const Lectura(
+        EstadoMascota.meta,
+        'Vas rumbo a tu meta de ahorro.',
+        Tono.positivo,
+      );
     }
   }
   if (v != null && v <= -0.10) {
-    return Lectura(EstadoMascota.ahorro,
-        'Tus gastos bajaron ${(-v * 100).round()} %. Buen control.', Tono.positivo);
+    return Lectura(
+      EstadoMascota.ahorro,
+      'Tus gastos bajaron ${(-v * 100).round()} %. Buen control.',
+      Tono.positivo,
+    );
   }
   if (r.ingresos > r.gastos) {
-    return const Lectura(EstadoMascota.hucha,
-        'Tus ingresos van por encima de tus gastos.', Tono.positivo);
+    return const Lectura(
+      EstadoMascota.hucha,
+      'Tus ingresos van por encima de tus gastos.',
+      Tono.positivo,
+    );
   }
-  return const Lectura(EstadoMascota.escritorio,
-      'Todo bajo control. Sigo supervisando.', Tono.neutro);
+  return const Lectura(
+    EstadoMascota.escritorio,
+    'Todo bajo control. Sigo supervisando.',
+    Tono.neutro,
+  );
 }
 
 /// Reacción en vivo mientras se escribe el monto en el formulario.
@@ -163,21 +197,49 @@ Lectura reaccionAlMonto({
 }) {
   if (tipo == TipoTransaccion.ingreso) {
     if (centavos > 0 && balance > 0 && centavos >= balance * 0.5) {
-      return const Lectura(EstadoMascota.celebra, '¡Entrada grande!', Tono.positivo);
+      return const Lectura(
+        EstadoMascota.celebra,
+        '¡Entrada grande!',
+        Tono.positivo,
+      );
     }
-    return const Lectura(EstadoMascota.bolsa, 'Entra dinero. ¡Buen movimiento!', Tono.positivo);
+    return const Lectura(
+      EstadoMascota.bolsa,
+      'Entra dinero. ¡Buen movimiento!',
+      Tono.positivo,
+    );
   }
   if (centavos == 0) {
-    return const Lectura(EstadoMascota.escritorio, 'Anota el gasto, yo superviso.', Tono.neutro);
+    return const Lectura(
+      EstadoMascota.escritorio,
+      'Anota el gasto, yo superviso.',
+      Tono.neutro,
+    );
   }
   if (balance <= 0 || centavos > balance) {
-    return const Lectura(EstadoMascota.panico, '¡Eso supera tu balance!', Tono.alerta);
+    return const Lectura(
+      EstadoMascota.panico,
+      '¡Eso supera tu balance!',
+      Tono.alerta,
+    );
   }
   if (centavos >= balance * 0.3) {
-    return const Lectura(EstadoMascota.sudando, 'Salida fuerte… ¿seguro?', Tono.alerta);
+    return const Lectura(
+      EstadoMascota.sudando,
+      'Salida fuerte… ¿seguro?',
+      Tono.alerta,
+    );
   }
   if (centavos >= balance * 0.1) {
-    return const Lectura(EstadoMascota.preocupado, 'Es un gasto considerable.', Tono.alerta);
+    return const Lectura(
+      EstadoMascota.preocupado,
+      'Es un gasto considerable.',
+      Tono.alerta,
+    );
   }
-  return const Lectura(EstadoMascota.escritorio, 'Gasto controlado.', Tono.neutro);
+  return const Lectura(
+    EstadoMascota.escritorio,
+    'Gasto controlado.',
+    Tono.neutro,
+  );
 }

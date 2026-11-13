@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../services/cifrado_service.dart';
+
 enum TipoCuentaBancaria { cuenta, debito }
 
 class CuentaBancaria {
@@ -31,7 +33,7 @@ class CuentaBancaria {
     return CuentaBancaria(
       id: doc.id,
       banco: d['banco'] as String? ?? 'Otro',
-      alias: d['alias'] as String? ?? '',
+      alias: CifradoService.descifrar(d['alias'] as String? ?? ''),
       tipo:
           TipoCuentaBancaria.values.asNameMap()[d['tipo'] as String?] ??
           TipoCuentaBancaria.cuenta,
@@ -42,7 +44,7 @@ class CuentaBancaria {
 
   Map<String, dynamic> toMap() => {
     'banco': banco,
-    'alias': alias,
+    'alias': CifradoService.cifrar(alias),
     'tipo': tipo.name,
     'activa': activa,
     'creada': Timestamp.fromDate(creada),

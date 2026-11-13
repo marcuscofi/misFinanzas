@@ -46,91 +46,135 @@ class _MovimientosPageState extends State<MovimientosPage> {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),
-          child: CustomScrollView(slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Expanded(
-                      child: Text('Movimientos',
-                          style: tema.textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w800)),
-                    ),
-                    SyncChip(lote: widget.repo.lote),
-                    if (modoPruebas)
-                      PopupMenuButton<String>(
-                        onSelected: (v) {
-                          if (v == 'gen') widget.repo.transacciones.generarPrueba(50);
-                          if (v == 'del') widget.repo.transacciones.borrarPrueba();
-                        },
-                        itemBuilder: (_) => const [
-                          PopupMenuItem(value: 'gen', child: Text('Generar 50 de prueba')),
-                          PopupMenuItem(value: 'del', child: Text('Borrar los de prueba')),
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Movimientos',
+                              style: tema.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          SyncChip(lote: widget.repo.lote),
+                          if (modoPruebas)
+                            PopupMenuButton<String>(
+                              onSelected: (v) {
+                                if (v == 'gen') {
+                                  widget.repo.transacciones.generarPrueba(50);
+                                }
+                                if (v == 'del') {
+                                  widget.repo.transacciones.borrarPrueba();
+                                }
+                              },
+                              itemBuilder: (_) => const [
+                                PopupMenuItem(
+                                  value: 'gen',
+                                  child: Text('Generar 50 de prueba'),
+                                ),
+                                PopupMenuItem(
+                                  value: 'del',
+                                  child: Text('Borrar los de prueba'),
+                                ),
+                              ],
+                            ),
                         ],
                       ),
-                  ]),
-                  const SizedBox(height: 12),
-                  SegmentedButton<int>(
-                    segments: const [
-                      ButtonSegment(value: 0, label: Text('Todos')),
-                      ButtonSegment(value: 1, label: Text('Gastos')),
-                      ButtonSegment(value: 2, label: Text('Ingresos')),
+                      const SizedBox(height: 12),
+                      SegmentedButton<int>(
+                        segments: const [
+                          ButtonSegment(value: 0, label: Text('Todos')),
+                          ButtonSegment(value: 1, label: Text('Gastos')),
+                          ButtonSegment(value: 2, label: Text('Ingresos')),
+                        ],
+                        selected: {_filtro},
+                        onSelectionChanged: (s) =>
+                            setState(() => _filtro = s.first),
+                      ),
                     ],
-                    selected: {_filtro},
-                    onSelectionChanged: (s) => setState(() => _filtro = s.first),
                   ),
-                ]),
-              ),
-            ),
-            if (lista.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Mascota(EstadoMascota.escritorio, tamano: 140),
-                    SizedBox(height: 8),
-                    Text('Nada por aquí todavía.'),
-                  ]),
                 ),
-              )
-            else
-              SliverList.builder(
-                itemCount: items.length,
-                itemBuilder: (context, i) {
-                  final item = items[i];
-                  if (item is DateTime) {
-                    return Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-                      child: Text(fechaLarga(item),
-                          style: tema.textTheme.labelLarge
-                              ?.copyWith(color: tema.colorScheme.outline)),
-                    );
-                  }
-                  final t = item as Transaccion;
-                  return Dismissible(
-                    key: ValueKey(t.id),
-                    direction: DismissDirection.endToStart,
-                    background: Container(
-                      color: tema.colorScheme.error.withValues(alpha: 0.25),
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.only(right: 24),
-                      child: Icon(Icons.delete_outline, color: tema.colorScheme.error),
-                    ),
-                    onDismissed: (_) => eliminarTransaccion(
-                        context, widget.repo.transacciones, t, confirmar: false),
-                    child: MovimientoTile(
-                      t: t,
-                      cuenta: t.cuentaId == cuentaEfectivo ? null : widget.repo.nombreCuenta(t.cuentaId),
-                      onTap: () => mostrarFormularioTransaccion(context, widget.repo, inicial: t),
-                      onEliminar: () => eliminarTransaccion(
-                          context, widget.repo.transacciones, t, confirmar: true),
-                    ),
-                  );
-                },
               ),
-            const SliverToBoxAdapter(child: SizedBox(height: 110)),
-          ]),
+              if (lista.isEmpty)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Mascota(EstadoMascota.escritorio, tamano: 140),
+                        SizedBox(height: 8),
+                        Text('Nada por aquí todavía.'),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                SliverList.builder(
+                  itemCount: items.length,
+                  itemBuilder: (context, i) {
+                    final item = items[i];
+                    if (item is DateTime) {
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                        child: Text(
+                          fechaLarga(item),
+                          style: tema.textTheme.labelLarge?.copyWith(
+                            color: tema.colorScheme.outline,
+                          ),
+                        ),
+                      );
+                    }
+                    final t = item as Transaccion;
+                    return Dismissible(
+                      key: ValueKey(t.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        color: tema.colorScheme.error.withValues(alpha: 0.25),
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 24),
+                        child: Icon(
+                          Icons.delete_outline,
+                          color: tema.colorScheme.error,
+                        ),
+                      ),
+                      onDismissed: (_) => eliminarTransaccion(
+                        context,
+                        widget.repo.transacciones,
+                        t,
+                        confirmar: false,
+                      ),
+                      child: MovimientoTile(
+                        t: t,
+                        cuenta: t.cuentaId == cuentaEfectivo
+                            ? null
+                            : widget.repo.nombreCuenta(t.cuentaId),
+                        onTap: () => mostrarFormularioTransaccion(
+                          context,
+                          widget.repo,
+                          inicial: t,
+                        ),
+                        onEliminar: () => eliminarTransaccion(
+                          context,
+                          widget.repo.transacciones,
+                          t,
+                          confirmar: true,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              const SliverToBoxAdapter(child: SizedBox(height: 110)),
+            ],
+          ),
         ),
       ),
     );

@@ -28,15 +28,17 @@ void main() {
   group('Transaccion', () {
     test('centavosConSigno distingue ingresos y gastos', () {
       final ingreso = Transaccion(
-          montoCentavos: 1000,
-          tipo: TipoTransaccion.ingreso,
-          categoria: 'Salario',
-          fecha: DateTime(2026, 1, 1));
+        montoCentavos: 1000,
+        tipo: TipoTransaccion.ingreso,
+        categoria: 'Salario',
+        fecha: DateTime(2026, 1, 1),
+      );
       final gasto = Transaccion(
-          montoCentavos: 400,
-          tipo: TipoTransaccion.gasto,
-          categoria: 'Comida',
-          fecha: DateTime(2026, 1, 1));
+        montoCentavos: 400,
+        tipo: TipoTransaccion.gasto,
+        categoria: 'Comida',
+        fecha: DateTime(2026, 1, 1),
+      );
       expect(ingreso.centavosConSigno, 1000);
       expect(gasto.centavosConSigno, -400);
     });

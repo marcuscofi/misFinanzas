@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+
 import '../models/plan_ahorro.dart';
 import '../services/planes_service.dart';
 import '../utils/formato.dart';
 
-Future<void> mostrarFormularioPlan(BuildContext context, PlanesService svc,
-    {PlanAhorro? inicial}) {
+Future<void> mostrarFormularioPlan(
+  BuildContext context,
+  PlanesService svc, {
+  PlanAhorro? inicial,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -26,12 +30,15 @@ class _FormPlan extends StatefulWidget {
 class _FormPlanState extends State<_FormPlan> {
   final _formKey = GlobalKey<FormState>();
   late ReglaAhorro _regla = widget.inicial?.regla ?? ReglaAhorro.porcentaje;
-  late final _nombre = TextEditingController(text: widget.inicial?.nombre ?? '');
+  late final _nombre = TextEditingController(
+    text: widget.inicial?.nombre ?? '',
+  );
   late final _valor = TextEditingController(text: _valorInicial());
   late final _objetivo = TextEditingController(
-      text: widget.inicial?.objetivoCentavos == null
-          ? ''
-          : (widget.inicial!.objetivoCentavos! / 100).toStringAsFixed(2));
+    text: widget.inicial?.objetivoCentavos == null
+        ? ''
+        : (widget.inicial!.objetivoCentavos! / 100).toStringAsFixed(2),
+  );
 
   bool get _editando => widget.inicial != null;
 
@@ -58,18 +65,21 @@ class _FormPlanState extends State<_FormPlan> {
     final valor = _editando
         ? base!.valor
         : (_regla == ReglaAhorro.porcentaje
-            ? int.parse(_valor.text.trim())
-            : parseCentavos(_valor.text)!);
-    widget.svc.guardar(PlanAhorro(
-      id: base?.id ?? '',
-      nombre: _nombre.text.trim(),
-      regla: _regla,
-      valor: valor,
-      objetivoCentavos:
-          _objetivo.text.trim().isEmpty ? null : parseCentavos(_objetivo.text),
-      desde: base?.desde ?? DateTime(ahora.year, ahora.month, 1),
-      hasta: base?.hasta,
-    ));
+              ? int.parse(_valor.text.trim())
+              : parseCentavos(_valor.text)!);
+    widget.svc.guardar(
+      PlanAhorro(
+        id: base?.id ?? '',
+        nombre: _nombre.text.trim(),
+        regla: _regla,
+        valor: valor,
+        objetivoCentavos: _objetivo.text.trim().isEmpty
+            ? null
+            : parseCentavos(_objetivo.text),
+        desde: base?.desde ?? DateTime(ahora.year, ahora.month, 1),
+        hasta: base?.hasta,
+      ),
+    );
     Navigator.of(context).pop();
   }
 
@@ -79,7 +89,11 @@ class _FormPlanState extends State<_FormPlan> {
     final porcentaje = _regla == ReglaAhorro.porcentaje;
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+        20,
+        0,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
       child: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -87,14 +101,18 @@ class _FormPlanState extends State<_FormPlan> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(_editando ? 'Editar plan' : 'Nuevo plan de ahorro',
-                  style: tema.textTheme.titleLarge),
+              Text(
+                _editando ? 'Editar plan' : 'Nuevo plan de ahorro',
+                style: tema.textTheme.titleLarge,
+              ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _nombre,
                 textCapitalization: TextCapitalization.sentences,
                 decoration: const InputDecoration(
-                    labelText: 'Nombre', hintText: 'Ej. Viaje, Emergencias'),
+                  labelText: 'Nombre',
+                  hintText: 'Ej. Viaje, Emergencias',
+                ),
                 validator: (v) => (v == null || v.trim().isEmpty)
                     ? 'Ponle un nombre'
                     : (v.trim().length > 60 ? 'Máximo 60 caracteres' : null),
@@ -103,36 +121,42 @@ class _FormPlanState extends State<_FormPlan> {
               SegmentedButton<ReglaAhorro>(
                 segments: const [
                   ButtonSegment(
-                      value: ReglaAhorro.porcentaje,
-                      label: Text('% de ingresos'),
-                      icon: Icon(Icons.percent)),
+                    value: ReglaAhorro.porcentaje,
+                    label: Text('% de ingresos'),
+                    icon: Icon(Icons.percent),
+                  ),
                   ButtonSegment(
-                      value: ReglaAhorro.montoFijo,
-                      label: Text('Monto fijo'),
-                      icon: Icon(Icons.attach_money)),
+                    value: ReglaAhorro.montoFijo,
+                    label: Text('Monto fijo'),
+                    icon: Icon(Icons.attach_money),
+                  ),
                 ],
                 selected: {_regla},
                 onSelectionChanged: _editando
                     ? null
                     : (s) => setState(() {
-                          _regla = s.first;
-                          _valor.clear();
-                        }),
+                        _regla = s.first;
+                        _valor.clear();
+                      }),
               ),
               const SizedBox(height: 14),
               TextFormField(
                 controller: _valor,
                 enabled: !_editando,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: InputDecoration(
-                  labelText: porcentaje ? 'Porcentaje de cada ingreso' : 'Monto por mes',
+                  labelText: porcentaje
+                      ? 'Porcentaje de cada ingreso'
+                      : 'Monto por mes',
                   prefixText: porcentaje ? null : r'$ ',
                   suffixText: porcentaje ? '%' : null,
                   helperText: _editando
                       ? 'La regla no se edita. Detén el plan y crea otro para cambiarla.'
                       : (porcentaje
-                          ? 'Se aparta de cada ingreso desde el 1 de este mes.'
-                          : 'Se aparta al inicio de cada mes, incluido este.'),
+                            ? 'Se aparta de cada ingreso desde el 1 de este mes.'
+                            : 'Se aparta al inicio de cada mes, incluido este.'),
                   helperMaxLines: 2,
                 ),
                 validator: (v) {
@@ -151,11 +175,14 @@ class _FormPlanState extends State<_FormPlan> {
               const SizedBox(height: 14),
               TextFormField(
                 controller: _objetivo,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Meta total (opcional)',
                   prefixText: r'$ ',
-                  helperText: 'Para ver tu progreso, ej. \$1,200 para un viaje.',
+                  helperText:
+                      'Para ver tu progreso, ej. \$1,200 para un viaje.',
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return null;

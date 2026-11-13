@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/transaccion.dart';
 import '../theme/paleta.dart';
 import '../utils/formato.dart';
@@ -37,11 +38,13 @@ class MovimientoTile extends StatelessWidget {
     return ListTile(
       contentPadding: const EdgeInsets.only(left: 12, right: 4),
       onTap: onTap,
-      subtitle: Text([
-        t.categoria,
-        ?cuenta,
-        if (mostrarFecha) fechaCorta(t.fecha),
-      ].join(' · ')),
+      subtitle: Text(
+        [
+          t.categoria,
+          ?cuenta,
+          if (mostrarFecha) fechaCorta(t.fecha),
+        ].join(' · '),
+      ),
       leading: Container(
         width: 44,
         height: 44,
@@ -52,19 +55,29 @@ class MovimientoTile extends StatelessWidget {
         ),
         child: Icon(_iconos[t.categoria] ?? Icons.category, color: color),
       ),
-      title: Text(t.descripcion.isEmpty ? t.categoria : t.descripcion,
-          maxLines: 1, overflow: TextOverflow.ellipsis),
-      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-        Text('${ingreso ? '+' : '-'}${formatoUsd(t.montoCentavos)}',
-            style: tema.textTheme.titleMedium
-                ?.copyWith(color: color, fontWeight: FontWeight.w700)),
-        IconButton(
-          tooltip: 'Eliminar',
-          icon: const Icon(Icons.delete_outline, size: 20),
-          color: tema.colorScheme.outline,
-          onPressed: onEliminar,
-        ),
-      ]),
+      title: Text(
+        t.descripcion.isEmpty ? t.categoria : t.descripcion,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '${ingreso ? '+' : '-'}${formatoUsd(t.montoCentavos)}',
+            style: tema.textTheme.titleMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Eliminar',
+            icon: const Icon(Icons.delete_outline, size: 20),
+            color: tema.colorScheme.outline,
+            onPressed: onEliminar,
+          ),
+        ],
+      ),
     );
   }
 }

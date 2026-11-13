@@ -20,7 +20,9 @@ int calcularSaldoCuenta(List<Transaccion> movs, String cuentaId) => movs
 
 /// Líquido total disponible: efectivo + saldo de las cuentas bancarias/débito.
 int calcularLiquidoTotal(
-        List<Transaccion> movs, List<CuentaBancaria> cuentas) =>
+  List<Transaccion> movs,
+  List<CuentaBancaria> cuentas,
+) =>
     calcularBalanceEfectivo(movs) +
     cuentas.fold(0, (a, c) => a + calcularSaldoCuenta(movs, c.id));
 
@@ -31,12 +33,16 @@ class EstadoTarjeta {
 
   int get limite => tarjeta.limiteMensualCentavos;
   int get restante => limite - gastadoMes;
-  double get uso => limite <= 0 ? (gastadoMes > 0 ? 1 : 0) : gastadoMes / limite;
+  double get uso =>
+      limite <= 0 ? (gastadoMes > 0 ? 1 : 0) : gastadoMes / limite;
 }
 
 /// Gasto de cada tarjeta SOLO en el mes calendario actual (se reinicia el día 1).
 List<EstadoTarjeta> estadoTarjetas(
-    List<Transaccion> movs, List<Tarjeta> tarjetas, DateTime ahora) {
+  List<Transaccion> movs,
+  List<Tarjeta> tarjetas,
+  DateTime ahora,
+) {
   final ini = DateTime(ahora.year, ahora.month);
   final fin = DateTime(ahora.year, ahora.month + 1);
   final porTarjeta = <String, int>{};
@@ -73,22 +79,36 @@ class PresupuestoSemanal {
     required this.fin,
     required this.disponible,
     required this.gastado,
-    required this.asignacion,
-    required this.semanasRestantes,
+    required this.asignacionOptimista,
+    required this.asignacionPesimista,
+    required this.semanasRestantesEnteras,
+    required this.semanasExactas,
+    required this.diasRestantesEnMes,
     required this.efectivoLibre,
     required this.cuentasRestante,
     required this.tarjetasRestante,
     required this.ahorroApartado,
   });
   final DateTime inicio, fin; // lunes a domingo
-  final int disponible, gastado, asignacion, semanasRestantes;
+  final int disponible, gastado;
+  final int asignacionOptimista, asignacionPesimista;
+  final int semanasRestantesEnteras, diasRestantesEnMes;
+  final double semanasExactas;
   final int efectivoLibre, cuentasRestante, tarjetasRestante, ahorroApartado;
 
-  /// Lo que aún puedes gastar esta semana (negativo = te pasaste).
-  int get quedan => asignacion - gastado;
-  double get progreso => asignacion <= 0
+  /// Lo que aún puedes gastar esta semana con el escenario conservador.
+  int get quedanPesimista => asignacionPesimista - gastado;
+
+  /// Lo que podrías gastar si los días sueltos no necesitaran presupuesto.
+  int get quedanOptimista => asignacionOptimista - gastado;
+
+  int get quedan => quedanPesimista;
+  int get asignacion => asignacionPesimista;
+  int get semanasRestantes => semanasRestantesEnteras;
+
+  double get progreso => asignacionPesimista <= 0
       ? (gastado > 0 ? 1.0 : 0.0)
-      : (gastado / asignacion).clamp(0.0, 1.0).toDouble();
+      : (gastado / asignacionPesimista).clamp(0.0, 1.0).toDouble();
 }
 
 PresupuestoSemanal calcularSemana({
@@ -105,16 +125,23 @@ PresupuestoSemanal calcularSemana({
   final finMes = DateTime(hoy.year, hoy.month + 1);
   // Cálculo exacto de las semanas restantes del mes basándonos en los días que faltan
   final ultimoDiaMes = DateTime(hoy.year, hoy.month + 1, 0).day;
-  final diasRestantesEnMes = ultimoDiaMes - hoy.day;
+  final diasRestantesEnMes = math.max(0, ultimoDiaMes - hoy.day);
+  final semanasRestantesEnteras = math.max(1, (diasRestantesEnMes / 7).floor());
+  final semanasExactas = math.max(1.0, diasRestantesEnMes / 7.0);
   final idsTarjetas = {for (final t in tarjetas) t.id};
   final idsCuentas = {for (final c in cuentasBancarias) c.id};
 
   final efectivo = calcularBalanceEfectivo(movs);
   final cuentasSaldo = cuentasBancarias.fold<int>(
-      0, (a, c) => a + calcularSaldoCuenta(movs, c.id));
+    0,
+    (a, c) => a + calcularSaldoCuenta(movs, c.id),
+  );
   final ahorro = planes.fold<int>(0, (a, p) => a + ahorroPlan(p, movs, ahora));
-  final tarjetasRestante = estadoTarjetas(movs, tarjetas, ahora)
-      .fold<int>(0, (a, e) => a + e.restante);
+  final tarjetasRestante = estadoTarjetas(
+    movs,
+    tarjetas,
+    ahora,
+  ).fold<int>(0, (a, e) => a + e.restante);
 
   // Gasto de la semana que ya está descontado del disponible actual.
   var gastado = 0;
@@ -131,19 +158,21 @@ PresupuestoSemanal calcularSemana({
   }
 
   // Semanas enteras restantes (mínimo 1)
-  var semanas = (diasRestantesEnMes / 7).floor();
-  if (semanas < 1) semanas = 1;
-
   final disponible = efectivo + cuentasSaldo - ahorro + tarjetasRestante;
-  final asignacion = math.max(0, (disponible + gastado) ~/ semanas);
+  final baseSemanal = math.max(0, disponible + gastado);
+  final asignacionOptimista = baseSemanal ~/ semanasRestantesEnteras;
+  final asignacionPesimista = (baseSemanal / semanasExactas).floor();
 
   return PresupuestoSemanal(
     inicio: inicio,
     fin: fin,
     disponible: disponible,
     gastado: gastado,
-    asignacion: asignacion,
-    semanasRestantes: semanas,
+    asignacionOptimista: asignacionOptimista,
+    asignacionPesimista: asignacionPesimista,
+    semanasRestantesEnteras: semanasRestantesEnteras,
+    semanasExactas: semanasExactas,
+    diasRestantesEnMes: diasRestantesEnMes,
     efectivoLibre: efectivo - ahorro,
     cuentasRestante: cuentasSaldo,
     tarjetasRestante: tarjetasRestante,

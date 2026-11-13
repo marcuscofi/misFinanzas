@@ -5,12 +5,14 @@ import 'package:firebase_core/firebase_core.dart';
 class FirebaseConfig {
   static const _apiKey = String.fromEnvironment('FIREBASE_API_KEY');
   static const _appId = String.fromEnvironment('FIREBASE_APP_ID');
-  static const _senderId =
-      String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');
+  static const _senderId = String.fromEnvironment(
+    'FIREBASE_MESSAGING_SENDER_ID',
+  );
   static const _projectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
   static const _authDomain = String.fromEnvironment('FIREBASE_AUTH_DOMAIN');
-  static const _storageBucket =
-      String.fromEnvironment('FIREBASE_STORAGE_BUCKET');
+  static const _storageBucket = String.fromEnvironment(
+    'FIREBASE_STORAGE_BUCKET',
+  );
 
   static const options = FirebaseOptions(
     apiKey: _apiKey,
@@ -29,9 +31,11 @@ class FirebaseConfig {
       'FIREBASE_MESSAGING_SENDER_ID': _senderId,
       'FIREBASE_PROJECT_ID': _projectId,
       'FIREBASE_AUTH_DOMAIN': _authDomain,
+      'FIREBASE_STORAGE_BUCKET': _storageBucket,
     };
-    final faltan =
-        requeridas.entries.where((e) => e.value.isEmpty).map((e) => e.key);
+    final faltan = requeridas.entries
+        .where((e) => e.value.isEmpty)
+        .map((e) => e.key);
     if (faltan.isNotEmpty) {
       throw StateError(
         'Faltan variables de entorno: ${faltan.join(', ')}. '

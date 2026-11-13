@@ -5,24 +5,27 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'dart:ui' show PointerDeviceKind;
 
-import 'firebase_options.dart';
+import 'config/firebase_config.dart';
 import 'screens/auth_gate.dart';
+import 'services/cifrado_service.dart';
 import 'theme/tema.dart';
 
 class _ScrollWeb extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
-        PointerDeviceKind.touch,
-        PointerDeviceKind.mouse,
-        PointerDeviceKind.trackpad,
-      };
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+  };
 }
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  FirebaseConfig.validar();
+  CifradoService.validarConfiguracion();
+
+  await Firebase.initializeApp(options: FirebaseConfig.options);
 
   // Debe ejecutarse antes de cualquier otra operación con Firestore.
   FirebaseFirestore.instance.settings = const Settings(

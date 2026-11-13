@@ -112,6 +112,7 @@ class _FormCuentaState extends State<_FormCuenta> {
               TextFormField(
                 controller: _alias,
                 textCapitalization: TextCapitalization.words,
+                maxLength: 60,
                 decoration: const InputDecoration(
                   labelText: 'Alias (opcional)',
                   hintText: 'Ej. Cuenta de nómina',
