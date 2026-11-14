@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../services/transacciones_service.dart';
 import '../theme/paleta.dart';
 
@@ -31,13 +32,21 @@ class SyncChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icono, size: 14, color: color),
-        const SizedBox(width: 6),
-        Text(texto,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icono, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            texto,
             style: TextStyle(
-                fontSize: 12, color: color, fontWeight: FontWeight.w600)),
-      ]),
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

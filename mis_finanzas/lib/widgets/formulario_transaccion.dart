@@ -35,32 +35,39 @@ class _Formulario extends StatefulWidget {
 class _FormularioState extends State<_Formulario> {
   final _formKey = GlobalKey<FormState>();
   late final _monto = TextEditingController(
-      text: widget.inicial == null
-          ? ''
-          : (widget.inicial!.montoCentavos / 100).toStringAsFixed(2));
-  late final _descripcion =
-      TextEditingController(text: widget.inicial?.descripcion ?? '');
+    text: widget.inicial == null
+        ? ''
+        : (widget.inicial!.montoCentavos / 100).toStringAsFixed(2),
+  );
+  late final _descripcion = TextEditingController(
+    text: widget.inicial?.descripcion ?? '',
+  );
   late TipoTransaccion _tipo = widget.inicial?.tipo ?? TipoTransaccion.gasto;
-  late String _categoria = widget.inicial?.categoria ??
-      (_tipo == TipoTransaccion.gasto ? categoriasGasto.first : categoriasIngreso.first);
+  late String _categoria =
+      widget.inicial?.categoria ??
+      (_tipo == TipoTransaccion.gasto
+          ? categoriasGasto.first
+          : categoriasIngreso.first);
   late String _cuentaId = widget.inicial?.cuentaId ?? cuentaEfectivo;
   late DateTime _fecha = widget.inicial?.fecha ?? DateTime.now();
 
   bool get _editando => widget.inicial != null;
 
   List<String> get _categorias {
-    final base = _tipo == TipoTransaccion.gasto ? categoriasGasto : categoriasIngreso;
+    final base = _tipo == TipoTransaccion.gasto
+        ? categoriasGasto
+        : categoriasIngreso;
     return base.contains(_categoria) ? base : [...base, _categoria];
   }
 
   List<_OpcionCuenta> get _opcionesEfectivo => [
-        _OpcionCuenta(
-          id: cuentaEfectivo,
-          nombre: 'Efectivo',
-          detalle: formatoUsd(widget.repo.balanceEfectivo),
-          icono: Icons.payments_outlined,
-        ),
-      ];
+    _OpcionCuenta(
+      id: cuentaEfectivo,
+      nombre: 'Efectivo',
+      detalle: formatoUsd(widget.repo.balanceEfectivo),
+      icono: Icons.payments_outlined,
+    ),
+  ];
 
   List<_OpcionCuenta> get _opcionesCuentas {
     final l = [
@@ -77,27 +84,28 @@ class _FormularioState extends State<_Formulario> {
     if (_cuentaId != cuentaEfectivo &&
         !widget.repo.esCuentaBancaria(_cuentaId) &&
         !widget.repo.esTarjetaCredito(_cuentaId)) {
-      l.add(_OpcionCuenta(
-        id: _cuentaId,
-        nombre: widget.repo.nombreCuenta(_cuentaId),
-        detalle: 'Cuenta no disponible',
-        icono: Icons.help_outline,
-      ));
+      l.add(
+        _OpcionCuenta(
+          id: _cuentaId,
+          nombre: widget.repo.nombreCuenta(_cuentaId),
+          detalle: 'Cuenta no disponible',
+          icono: Icons.help_outline,
+        ),
+      );
     }
     return l;
   }
 
   List<_OpcionCuenta> get _opcionesTarjetas => [
-        if (_tipo == TipoTransaccion.gasto)
-          for (final t in widget.repo.tarjetas)
-            _OpcionCuenta(
-              id: t.id,
-              nombre: t.nombre,
-              detalle:
-                  '${formatoUsd(widget.repo.restanteTarjeta(t.id))} restante',
-              icono: Icons.credit_card,
-            ),
-      ];
+    if (_tipo == TipoTransaccion.gasto)
+      for (final t in widget.repo.tarjetas)
+        _OpcionCuenta(
+          id: t.id,
+          nombre: t.nombre,
+          detalle: '${formatoUsd(widget.repo.restanteTarjeta(t.id))} restante',
+          icono: Icons.credit_card,
+        ),
+  ];
 
   @override
   void initState() {
@@ -125,8 +133,11 @@ class _FormularioState extends State<_Formulario> {
       _ => repo.restanteTarjeta(_cuentaId),
     };
     final o = widget.inicial;
-    if (o != null && o.tipo == TipoTransaccion.gasto && o.cuentaId == _cuentaId) {
-      ref += o.montoCentavos; // al editar, el gasto original ya estaba descontado
+    if (o != null &&
+        o.tipo == TipoTransaccion.gasto &&
+        o.cuentaId == _cuentaId) {
+      ref +=
+          o.montoCentavos; // al editar, el gasto original ya estaba descontado
     }
     return ref;
   }
@@ -151,22 +162,32 @@ class _FormularioState extends State<_Formulario> {
     final tema = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(titulo,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            titulo,
             style: tema.textTheme.labelSmall?.copyWith(
-                color: tema.colorScheme.outline,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5)),
-        const SizedBox(height: 6),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final o in opciones)
-            _OpcionCuentaWidget(
-              opcion: o,
-              seleccionada: _cuentaId == o.id,
-              onTap: () => setState(() => _cuentaId = o.id),
+              color: tema.colorScheme.outline,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
             ),
-        ]),
-      ]),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final o in opciones)
+                _OpcionCuentaWidget(
+                  opcion: o,
+                  seleccionada: _cuentaId == o.id,
+                  onTap: () => setState(() => _cuentaId = o.id),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -203,11 +224,15 @@ class _FormularioState extends State<_Formulario> {
     guardado.catchError((Object e) {
       messenger
         ..clearSnackBars()
-        ..showSnackBar(SnackBar(
-          content: Text(e is FirebaseException && e.code == 'permission-denied'
-              ? 'No se pudo guardar: permisos insuficientes en Firestore.'
-              : 'No se pudo guardar el movimiento. Revisa tu conexión.'),
-        ));
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              e is FirebaseException && e.code == 'permission-denied'
+                  ? 'No se pudo guardar: permisos insuficientes en Firestore.'
+                  : 'No se pudo guardar el movimiento. Revisa tu conexión.',
+            ),
+          ),
+        );
     });
   }
 
@@ -221,7 +246,11 @@ class _FormularioState extends State<_Formulario> {
     );
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+        20,
+        0,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
       child: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -229,22 +258,31 @@ class _FormularioState extends State<_Formulario> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(children: [
-                Mascota(lectura.estado, tamano: 84),
-                const SizedBox(width: 12),
-                Expanded(child: Text(lectura.mensaje, style: tema.textTheme.bodyLarge)),
-              ]),
+              Row(
+                children: [
+                  Mascota(lectura.estado, tamano: 84),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      lectura.mensaje,
+                      style: tema.textTheme.bodyLarge,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               SegmentedButton<TipoTransaccion>(
                 segments: const [
                   ButtonSegment(
-                      value: TipoTransaccion.gasto,
-                      label: Text('Gasto'),
-                      icon: Icon(Icons.arrow_upward)),
+                    value: TipoTransaccion.gasto,
+                    label: Text('Gasto'),
+                    icon: Icon(Icons.arrow_upward),
+                  ),
                   ButtonSegment(
-                      value: TipoTransaccion.ingreso,
-                      label: Text('Ingreso'),
-                      icon: Icon(Icons.arrow_downward)),
+                    value: TipoTransaccion.ingreso,
+                    label: Text('Ingreso'),
+                    icon: Icon(Icons.arrow_downward),
+                  ),
                 ],
                 selected: {_tipo},
                 onSelectionChanged: (s) => setState(() {
@@ -260,44 +298,60 @@ class _FormularioState extends State<_Formulario> {
               TextFormField(
                 controller: _monto,
                 autofocus: !_editando,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 style: tema.textTheme.headlineMedium,
-                decoration: const InputDecoration(prefixText: r'$ ', hintText: '0.00'),
+                decoration: const InputDecoration(
+                  prefixText: r'$ ',
+                  hintText: '0.00',
+                ),
                 validator: (v) {
                   final c = parseCentavos(v ?? '');
                   if (c == null) return 'Monto inválido';
                   if (c <= 0) return 'Debe ser mayor a 0';
+                  if (c > 1000000000) return 'Monto demasiado alto';
                   return null;
                 },
               ),
               const SizedBox(height: 16),
-              Wrap(spacing: 8, runSpacing: 4, children: [
-                for (final c in _categorias)
-                  ChoiceChip(
-                    label: Text(c),
-                    selected: _categoria == c,
-                    onSelected: (_) => setState(() => _categoria = c),
-                  ),
-              ]),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  for (final c in _categorias)
+                    ChoiceChip(
+                      label: Text(c),
+                      selected: _categoria == c,
+                      onSelected: (_) => setState(() => _categoria = c),
+                    ),
+                ],
+              ),
               const SizedBox(height: 16),
               Text(
-                  _tipo == TipoTransaccion.gasto
-                      ? 'Pagar con'
-                      : 'Depositar en',
-                  style: tema.textTheme.labelLarge
-                      ?.copyWith(color: tema.colorScheme.outline)),
+                _tipo == TipoTransaccion.gasto ? 'Pagar con' : 'Depositar en',
+                style: tema.textTheme.labelLarge?.copyWith(
+                  color: tema.colorScheme.outline,
+                ),
+              ),
               const SizedBox(height: 8),
               _grupoCuentas('Efectivo', _opcionesEfectivo),
               _grupoCuentas('Cuentas y Débito', _opcionesCuentas),
               _grupoCuentas('Tarjetas de Crédito', _opcionesTarjetas),
-              Text(_pista(),
-                  style: tema.textTheme.bodySmall
-                      ?.copyWith(color: tema.colorScheme.outline)),
+              Text(
+                _pista(),
+                style: tema.textTheme.bodySmall?.copyWith(
+                  color: tema.colorScheme.outline,
+                ),
+              ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _descripcion,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(labelText: 'Descripción (opcional)'),
+                maxLength: 500,
+                decoration: const InputDecoration(
+                  labelText: 'Descripción (opcional)',
+                ),
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
@@ -366,29 +420,39 @@ class _OpcionCuentaWidget extends StatelessWidget {
                   : Colors.white12,
             ),
           ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(opcion.icono, size: 18, color: color),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Column(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(opcion.icono, size: 18, color: color),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(opcion.nombre,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: tema.textTheme.labelLarge?.copyWith(
-                            fontWeight: seleccionada
-                                ? FontWeight.w700
-                                : FontWeight.w500)),
-                    Text(opcion.detalle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: tema.textTheme.bodySmall
-                            ?.copyWith(color: tema.colorScheme.outline)),
-                  ]),
-            ),
-          ]),
+                    Text(
+                      opcion.nombre,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: tema.textTheme.labelLarge?.copyWith(
+                        fontWeight: seleccionada
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      opcion.detalle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: tema.textTheme.bodySmall?.copyWith(
+                        color: tema.colorScheme.outline,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

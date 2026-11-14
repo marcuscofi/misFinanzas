@@ -1,4 +1,5 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 class GlassCard extends StatelessWidget {
@@ -13,7 +14,8 @@ class GlassCard extends StatelessWidget {
   final Widget child;
   final EdgeInsets padding;
   final Color? acento;
-  final bool blur; // BackdropFilter es costoso: úsalo solo donde haya algo detrás.
+  final bool
+  blur; // BackdropFilter es costoso: úsalo solo donde haya algo detrás.
   final VoidCallback? onTap;
 
   @override
@@ -27,12 +29,16 @@ class GlassCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            (acento ?? Colors.white).withValues(alpha: acento == null ? 0.08 : 0.14),
+            (acento ?? Colors.white).withValues(
+              alpha: acento == null ? 0.08 : 0.14,
+            ),
             Colors.white.withValues(alpha: 0.03),
           ],
         ),
         border: Border.all(
-          color: (acento ?? Colors.white).withValues(alpha: acento == null ? 0.10 : 0.35),
+          color: (acento ?? Colors.white).withValues(
+            alpha: acento == null ? 0.10 : 0.35,
+          ),
         ),
       ),
       child: child,
@@ -41,7 +47,9 @@ class GlassCard extends StatelessWidget {
       w = ClipRRect(
         borderRadius: radio,
         child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16), child: w),
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: w,
+        ),
       );
     }
     if (onTap != null) {

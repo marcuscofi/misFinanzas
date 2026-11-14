@@ -1,20 +1,26 @@
 import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
 import '../theme/paleta.dart';
 
 class GraficaGastos extends StatelessWidget {
-  const GraficaGastos(
-      {super.key, required this.serie, required this.seriePrev, this.alto = 170});
+  const GraficaGastos({
+    super.key,
+    required this.serie,
+    required this.seriePrev,
+    this.alto = 170,
+  });
   final List<int> serie, seriePrev;
   final double alto;
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: alto,
-        width: double.infinity,
-        child: CustomPaint(painter: _Painter(serie, seriePrev)),
-      );
+    height: alto,
+    width: double.infinity,
+    child: CustomPaint(painter: _Painter(serie, seriePrev)),
+  );
 }
 
 class _Painter extends CustomPainter {
@@ -97,12 +103,16 @@ class _Painter extends CustomPainter {
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
           ..shader = const LinearGradient(
-                  colors: [Paleta.lima, Paleta.esmeralda, Paleta.menta])
-              .createShader(rect),
+            colors: [Paleta.lima, Paleta.esmeralda, Paleta.menta],
+          ).createShader(rect),
       );
     }
 
-    canvas.drawCircle(ultimo, 10, Paint()..color = Paleta.esmeralda.withValues(alpha: 0.25));
+    canvas.drawCircle(
+      ultimo,
+      10,
+      Paint()..color = Paleta.esmeralda.withValues(alpha: 0.25),
+    );
     canvas.drawCircle(ultimo, 5, Paint()..color = Paleta.esmeralda);
   }
 

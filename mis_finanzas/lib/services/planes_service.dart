@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/plan_ahorro.dart';
 
 class PlanesService {
   PlanesService(this.uid, {FirebaseFirestore? db})
-      : _db = db ?? FirebaseFirestore.instance;
+    : _db = db ?? FirebaseFirestore.instance;
   final String uid;
   final FirebaseFirestore _db;
 

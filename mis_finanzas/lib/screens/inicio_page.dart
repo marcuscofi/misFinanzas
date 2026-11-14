@@ -16,11 +16,7 @@ import '../widgets/formulario_transaccion.dart';
 import '../models/transaccion.dart';
 
 class InicioPage extends StatefulWidget {
-  const InicioPage({
-    super.key,
-    required this.repo,
-    required this.onVerTodos,
-  });
+  const InicioPage({super.key, required this.repo, required this.onVerTodos});
   final VoidCallback onVerTodos;
   final FinanzasRepo repo;
 
@@ -40,25 +36,36 @@ class _InicioPageState extends State<InicioPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) => AlertDialog(
           title: const Text('¿Cuántos meses?'),
-          content: Row(mainAxisSize: MainAxisSize.min, children: [
-            IconButton.filledTonal(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton.filledTonal(
                 onPressed: valor > 1 ? () => setS(() => valor--) : null,
-                icon: const Icon(Icons.remove)),
-            SizedBox(
+                icon: const Icon(Icons.remove),
+              ),
+              SizedBox(
                 width: 80,
-                child: Text('$valor',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(ctx).textTheme.headlineMedium)),
-            IconButton.filledTonal(
+                child: Text(
+                  '$valor',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(ctx).textTheme.headlineMedium,
+                ),
+              ),
+              IconButton.filledTonal(
                 onPressed: valor < 36 ? () => setS(() => valor++) : null,
-                icon: const Icon(Icons.add)),
-          ]),
+                icon: const Icon(Icons.add),
+              ),
+            ],
+          ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
             FilledButton(
-                onPressed: () => Navigator.pop(ctx, valor),
-                child: const Text('Aplicar')),
+              onPressed: () => Navigator.pop(ctx, valor),
+              child: const Text('Aplicar'),
+            ),
           ],
         ),
       ),
@@ -70,7 +77,10 @@ class _InicioPageState extends State<InicioPage> {
     final movs = widget.repo.lote.items;
     final r = analizar(movs, _periodo, DateTime.now());
     final lectura = evaluarMascota(
-        balance: widget.repo.liquidoTotal, r: r, hayDatos: movs.isNotEmpty);
+      balance: widget.repo.liquidoTotal,
+      r: r,
+      hayDatos: movs.isNotEmpty,
+    );
 
     final izq = <Widget>[
       _cabecera(),
@@ -83,29 +93,43 @@ class _InicioPageState extends State<InicioPage> {
     ];
     final der = <Widget>[
       const SizedBox(height: 8),
-      Row(children: [
-        Text('Últimos movimientos',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w700)),
-        const Spacer(),
-        TextButton(onPressed: widget.onVerTodos, child: const Text('Ver todos')),
-      ]),
+      Row(
+        children: [
+          Text(
+            'Últimos movimientos',
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const Spacer(),
+          TextButton(
+            onPressed: widget.onVerTodos,
+            child: const Text('Ver todos'),
+          ),
+        ],
+      ),
       if (movs.isEmpty)
         const Padding(
           padding: EdgeInsets.all(24),
-          child: Text('Aún no hay movimientos.\nToca "Nuevo" para empezar.',
-              textAlign: TextAlign.center),
+          child: Text(
+            'Aún no hay movimientos.\nToca "Nuevo" para empezar.',
+            textAlign: TextAlign.center,
+          ),
         ),
       for (final t in movs.take(6))
         MovimientoTile(
           t: t,
           mostrarFecha: true,
-          onEliminar: () =>
-              eliminarTransaccion(context, widget.repo.transacciones, t, confirmar: true),
-          cuenta: t.cuentaId == cuentaEfectivo ? null : widget.repo.nombreCuenta(t.cuentaId),
-          onTap: () => mostrarFormularioTransaccion(context, widget.repo, inicial: t),
+          onEliminar: () => eliminarTransaccion(
+            context,
+            widget.repo.transacciones,
+            t,
+            confirmar: true,
+          ),
+          cuenta: t.cuentaId == cuentaEfectivo
+              ? null
+              : widget.repo.nombreCuenta(t.cuentaId),
+          onTap: () =>
+              mostrarFormularioTransaccion(context, widget.repo, inicial: t),
         ),
     ];
 
@@ -115,35 +139,48 @@ class _InicioPageState extends State<InicioPage> {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1100),
-          child: LayoutBuilder(builder: (context, c) {
-            if (c.maxWidth >= 900) {
-              return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Expanded(flex: 3, child: ListView(padding: pad, children: izq)),
-                Expanded(flex: 2, child: ListView(padding: pad, children: der)),
-              ]);
-            }
-            return ListView(padding: pad, children: [...izq, ...der]);
-          }),
+          child: LayoutBuilder(
+            builder: (context, c) {
+              if (c.maxWidth >= 900) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: ListView(padding: pad, children: izq),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: ListView(padding: pad, children: der),
+                    ),
+                  ],
+                );
+              }
+              return ListView(padding: pad, children: [...izq, ...der]);
+            },
+          ),
         ),
       ),
     );
   }
 
-  Widget _cabecera() => Row(children: [
-        Expanded(
-          child: Text('Mis Finanzas',
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w800)),
+  Widget _cabecera() => Row(
+    children: [
+      Expanded(
+        child: Text(
+          'Mis Finanzas',
+          style: Theme.of(context).textTheme.headlineSmall
+              ?.copyWith(fontWeight: FontWeight.w800),
         ),
-        SyncChip(lote: widget.repo.lote),
-        IconButton(
-          tooltip: 'Cerrar sesión',
-          icon: const Icon(Icons.logout),
-          onPressed: () => FirebaseAuth.instance.signOut(),
-        ),
-      ]);
+      ),
+      SyncChip(lote: widget.repo.lote),
+      IconButton(
+        tooltip: 'Cerrar sesión',
+        icon: const Icon(Icons.logout),
+        onPressed: () => FirebaseAuth.instance.signOut(),
+      ),
+    ],
+  );
 
   Widget _tarjetaMascota(Lectura l) {
     final tema = Theme.of(context);
@@ -154,102 +191,163 @@ class _InicioPageState extends State<InicioPage> {
     };
     return GlassCard(
       acento: acento,
-      child: Row(children: [
-        Mascota(l.estado, tamano: 120),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Balance actual',
-                style: tema.textTheme.labelLarge
-                    ?.copyWith(color: tema.colorScheme.outline)),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(formatoUsd(widget.repo.liquidoTotal),
-                  style: tema.textTheme.displaySmall
-                      ?.copyWith(fontWeight: FontWeight.w800)),
+      child: Row(
+        children: [
+          Mascota(l.estado, tamano: 120),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Balance actual',
+                  style: tema.textTheme.labelLarge?.copyWith(
+                    color: tema.colorScheme.outline,
+                  ),
+                ),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    formatoUsd(widget.repo.liquidoTotal),
+                    style: tema.textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(l.mensaje, style: tema.textTheme.bodyMedium),
+              ],
             ),
-            const SizedBox(height: 6),
-            Text(l.mensaje, style: tema.textTheme.bodyMedium),
-          ]),
-        ),
-      ]),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _tarjetaGrafica(ResumenPeriodo r) {
     final tema = Theme.of(context);
     return GlassCard(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Text('Gastos', style: tema.textTheme.titleMedium),
-          const Spacer(),
-          _chipVariacion(r.variacion),
-        ]),
-        const SizedBox(height: 4),
-        Text(formatoUsd(r.gastos),
-            style: tema.textTheme.headlineMedium
-                ?.copyWith(fontWeight: FontWeight.w800)),
-        const SizedBox(height: 12),
-        GraficaGastos(serie: r.serie, seriePrev: r.seriePrev),
-        const SizedBox(height: 6),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(fechaMuyCorta(r.inicio), style: tema.textTheme.bodySmall),
-          Text('Línea punteada: periodo anterior',
-              style: tema.textTheme.bodySmall
-                  ?.copyWith(color: tema.colorScheme.outline)),
-          Text(fechaMuyCorta(r.hoy), style: tema.textTheme.bodySmall),
-        ]),
-        const SizedBox(height: 14),
-        Wrap(spacing: 8, runSpacing: 4, children: [
-          for (final p in _presets)
-            ChoiceChip(
-              label: Text(p.etiqueta),
-              selected: _periodo == p,
-              onSelected: (_) => setState(() => _periodo = p),
-            ),
-          ChoiceChip(
-            avatar: const Icon(Icons.tune, size: 16),
-            label: Text(_periodo.meses > 1 ? _periodo.etiqueta : 'Meses…'),
-            selected: _periodo.meses > 1,
-            onSelected: (_) async {
-              final m = await _pedirMeses(_periodo.meses > 1 ? _periodo.meses : 3);
-              if (m != null) setState(() => _periodo = Periodo.meses(m));
-            },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('Gastos', style: tema.textTheme.titleMedium),
+              const Spacer(),
+              _chipVariacion(r.variacion),
+            ],
           ),
-        ]),
-        const Divider(height: 28, color: Colors.white12),
-        Row(children: [
-          Expanded(
-              child: _Mini('Ingresos', formatoUsd(r.ingresos),
-                  Icons.arrow_downward, Paleta.esmeralda)),
-          Expanded(
-              child: _Mini('Gastos', formatoUsd(r.gastos), Icons.arrow_upward,
-                  Paleta.gasto)),
-        ]),
-      ]),
+          const SizedBox(height: 4),
+          Text(
+            formatoUsd(r.gastos),
+            style: tema.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 12),
+          GraficaGastos(serie: r.serie, seriePrev: r.seriePrev),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(fechaMuyCorta(r.inicio), style: tema.textTheme.bodySmall),
+              Text(
+                'Línea punteada: periodo anterior',
+                style: tema.textTheme.bodySmall?.copyWith(
+                  color: tema.colorScheme.outline,
+                ),
+              ),
+              Text(fechaMuyCorta(r.hoy), style: tema.textTheme.bodySmall),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final p in _presets)
+                ChoiceChip(
+                  label: Text(p.etiqueta),
+                  selected: _periodo == p,
+                  onSelected: (_) => setState(() => _periodo = p),
+                ),
+              ChoiceChip(
+                avatar: const Icon(Icons.tune, size: 16),
+                label: Text(_periodo.meses > 1 ? _periodo.etiqueta : 'Meses…'),
+                selected: _periodo.meses > 1,
+                onSelected: (_) async {
+                  final m = await _pedirMeses(
+                    _periodo.meses > 1 ? _periodo.meses : 3,
+                  );
+                  if (m != null) setState(() => _periodo = Periodo.meses(m));
+                },
+              ),
+            ],
+          ),
+          const Divider(height: 28, color: Colors.white12),
+          Row(
+            children: [
+              Expanded(
+                child: _Mini(
+                  'Ingresos',
+                  formatoUsd(r.ingresos),
+                  Icons.arrow_downward,
+                  Paleta.esmeralda,
+                ),
+              ),
+              Expanded(
+                child: _Mini(
+                  'Gastos',
+                  formatoUsd(r.gastos),
+                  Icons.arrow_upward,
+                  Paleta.gasto,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
   Widget _chipVariacion(double? v) {
     final tema = Theme.of(context);
     if (v == null) {
-      return Text('Sin periodo previo',
-          style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.outline));
+      return Text(
+        'Sin periodo previo',
+        style: tema.textTheme.bodySmall?.copyWith(
+          color: tema.colorScheme.outline,
+        ),
+      );
     }
     final sube = v > 0;
-    final color = v == 0 ? tema.colorScheme.outline : (sube ? Paleta.gasto : Paleta.esmeralda);
+    final color = v == 0
+        ? tema.colorScheme.outline
+        : (sube ? Paleta.gasto : Paleta.esmeralda);
     final texto = v == 0
         ? 'Sin cambios'
         : '${sube ? '+' : ''}${(v * 100).toStringAsFixed(0)} % vs. anterior';
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(v == 0 ? Icons.trending_flat : (sube ? Icons.trending_up : Icons.trending_down),
-          size: 18, color: color),
-      const SizedBox(width: 4),
-      Text(texto,
-          style: tema.textTheme.labelMedium
-              ?.copyWith(color: color, fontWeight: FontWeight.w700)),
-    ]);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          v == 0
+              ? Icons.trending_flat
+              : (sube ? Icons.trending_up : Icons.trending_down),
+          size: 18,
+          color: color,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          texto,
+          style: tema.textTheme.labelMedium?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -261,15 +359,28 @@ class _Mini extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
-    return Row(children: [
-      Icon(icono, size: 18, color: color),
-      const SizedBox(width: 6),
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(etiqueta,
-            style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.outline)),
-        Text(valor,
-            style: tema.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-      ]),
-    ]);
+    return Row(
+      children: [
+        Icon(icono, size: 18, color: color),
+        const SizedBox(width: 6),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              etiqueta,
+              style: tema.textTheme.bodySmall?.copyWith(
+                color: tema.colorScheme.outline,
+              ),
+            ),
+            Text(
+              valor,
+              style: tema.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }

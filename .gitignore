@@ -1,0 +1,3 @@
+// Ignorar las versiones de repomix generadas automáticamente
+
+versiones/repomix-output-v*.xml

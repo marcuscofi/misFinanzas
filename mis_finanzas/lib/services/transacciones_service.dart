@@ -1,15 +1,20 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 
 import '../models/transaccion.dart';
+import 'cifrado_service.dart';
 
 /// true solo en builds de prueba: --dart-define=MODO_PRUEBAS=true
-const modoPruebas = bool.fromEnvironment('MODO_PRUEBAS');
+const modoPruebas = bool.fromEnvironment('MODO_PRUEBAS') && !kReleaseMode;
 
 class LoteTransacciones {
-  const LoteTransacciones(this.items,
-      {this.pendientes = false, this.desdeCache = false});
+  const LoteTransacciones(
+    this.items, {
+    this.pendientes = false,
+    this.desdeCache = false,
+  });
   final List<Transaccion> items;
 
   /// Hay escrituras locales aún no confirmadas por el servidor.
@@ -21,7 +26,7 @@ class LoteTransacciones {
 
 class TransaccionesService {
   TransaccionesService(this.uid, {FirebaseFirestore? db})
-      : _db = db ?? FirebaseFirestore.instance;
+    : _db = db ?? FirebaseFirestore.instance;
 
   final String uid;
   final FirebaseFirestore _db;
@@ -34,11 +39,13 @@ class TransaccionesService {
       .orderBy('fecha', descending: true)
       .limit(limite)
       .snapshots(includeMetadataChanges: true)
-      .map((s) => LoteTransacciones(
-            s.docs.map(Transaccion.fromDoc).toList(),
-            pendientes: s.metadata.hasPendingWrites,
-            desdeCache: s.metadata.isFromCache,
-          ));
+      .map(
+        (s) => LoteTransacciones(
+          s.docs.map(Transaccion.fromDoc).toList(),
+          pendientes: s.metadata.hasPendingWrites,
+          desdeCache: s.metadata.isFromCache,
+        ),
+      );
 
   // Sin conexión estos Future no se completan hasta sincronizar: no usar await en la UI.
   Future<void> agregar(Transaccion t) => _col.doc().set(t.toMap());
@@ -47,7 +54,17 @@ class TransaccionesService {
 
   // ---- Solo para pruebas (se muestran con MODO_PRUEBAS=true) ----
 
+  void _exigirModoPruebas() {
+    if (!modoPruebas) {
+      throw StateError('MODO_PRUEBAS está desactivado en esta compilación.');
+    }
+  }
+
   Future<void> generarPrueba(int n) {
+    _exigirModoPruebas();
+    if (n < 1 || n > 500) {
+      throw ArgumentError.value(n, 'n', 'Debe estar entre 1 y 500');
+    }
     final batch = _db.batch();
     final rnd = Random();
     final ahora = DateTime.now();
@@ -69,14 +86,17 @@ class TransaccionesService {
   }
 
   Future<void> borrarPrueba() async {
+    _exigirModoPruebas();
     // Source.cache: funciona igual con o sin red.
-    final s = await _col
-        .where('descripcion', isGreaterThanOrEqualTo: prefijoPrueba)
-        .where('descripcion', isLessThan: '$prefijoPrueba\uf8ff')
-        .get(const GetOptions(source: Source.cache));
+    final s = await _col.get(const GetOptions(source: Source.cache));
     final batch = _db.batch();
     for (final d in s.docs) {
-      batch.delete(d.reference);
+      final descripcion = CifradoService.descifrar(
+        d.data()['descripcion'] as String? ?? '',
+      );
+      if (descripcion.startsWith(prefijoPrueba)) {
+        batch.delete(d.reference);
+      }
     }
     return batch.commit();
   }

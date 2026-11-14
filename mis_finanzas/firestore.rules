@@ -1,52 +1,103 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function autenticado(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function textoSeguro(valor, maximo) {
+      return valor is string && valor.size() <= maximo;
+    }
+
+    function textoNoVacio(valor, maximo) {
+      return textoSeguro(valor, maximo) && valor.size() > 0;
+    }
+
+    function idCuentaValido(valor) {
+      return valor is string
+        && valor.size() > 0
+        && valor.size() <= 128
+        && valor.matches('^[A-Za-z0-9_-]+$');
+    }
+
+    function referenciaCuentaValida(uid, cuentaId, tipo) {
+      return idCuentaValido(cuentaId) && (
+        cuentaId == 'efectivo'
+        || exists(/databases/$(database)/documents/users/$(uid)/cuentasBancarias/$(cuentaId))
+        || (tipo == 'gasto'
+            && exists(/databases/$(database)/documents/users/$(uid)/tarjetas/$(cuentaId)))
+      );
+    }
 
     match /users/{uid}/transacciones/{id} {
-      allow read, delete: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid
+      allow read, delete: if autenticado(uid);
+      allow create, update: if autenticado(uid)
+        && request.resource.data.keys().hasOnly([
+          'montoCentavos', 'tipo', 'categoria', 'descripcion', 'fecha', 'cuentaId'
+        ])
         && request.resource.data.montoCentavos is int
         && request.resource.data.montoCentavos > 0
+        && request.resource.data.montoCentavos <= 1000000000
         && request.resource.data.tipo in ['ingreso', 'gasto']
+        && textoNoVacio(request.resource.data.categoria, 40)
+        && textoSeguro(request.resource.data.descripcion, 2048)
         && request.resource.data.fecha is timestamp
-        && request.resource.data.get('cuentaId', 'efectivo') is string
-        && (request.resource.data.tipo == 'gasto'
-            || request.resource.data.get('cuentaId', 'efectivo') == 'efectivo'
-            || exists(/databases/$(database)/documents/users/$(uid)/cuentasBancarias/$(request.resource.data.get('cuentaId', 'efectivo'))));
+        && referenciaCuentaValida(
+          uid,
+          request.resource.data.cuentaId,
+          request.resource.data.tipo
+        );
     }
 
     match /users/{uid}/tarjetas/{id} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.banco is string
-        && request.resource.data.alias is string
+      allow read, delete: if autenticado(uid);
+      allow create, update: if autenticado(uid)
+        && request.resource.data.keys().hasOnly([
+          'banco', 'alias', 'limiteMensualCentavos', 'activa', 'creada'
+        ])
+        && textoNoVacio(request.resource.data.banco, 60)
+        && textoSeguro(request.resource.data.alias, 512)
         && request.resource.data.limiteMensualCentavos is int
         && request.resource.data.limiteMensualCentavos > 0
+        && request.resource.data.limiteMensualCentavos <= 1000000000
         && request.resource.data.activa is bool
         && request.resource.data.creada is timestamp;
     }
 
     match /users/{uid}/cuentasBancarias/{id} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.banco is string
-        && request.resource.data.alias is string
+      allow read, delete: if autenticado(uid);
+      allow create, update: if autenticado(uid)
+        && request.resource.data.keys().hasOnly([
+          'banco', 'alias', 'tipo', 'activa', 'creada'
+        ])
+        && textoNoVacio(request.resource.data.banco, 60)
+        && textoSeguro(request.resource.data.alias, 512)
         && request.resource.data.tipo in ['cuenta', 'debito']
         && request.resource.data.activa is bool
         && request.resource.data.creada is timestamp;
     }
 
     match /users/{uid}/planesAhorro/{id} {
-      allow read, delete: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.nombre is string
-        && request.resource.data.nombre.size() > 0
-        && request.resource.data.nombre.size() <= 60
+      allow read, delete: if autenticado(uid);
+      allow create, update: if autenticado(uid)
+        && request.resource.data.keys().hasOnly([
+          'nombre', 'regla', 'valor', 'objetivoCentavos', 'desde', 'hasta'
+        ])
+        && textoNoVacio(request.resource.data.nombre, 60)
         && request.resource.data.regla in ['porcentaje', 'montoFijo']
         && request.resource.data.valor is int
         && request.resource.data.valor > 0
-        && (request.resource.data.regla != 'porcentaje' || request.resource.data.valor <= 100)
-        && request.resource.data.desde is timestamp;
+        && request.resource.data.valor <= 1000000000
+        && (request.resource.data.regla != 'porcentaje'
+            || request.resource.data.valor <= 100)
+        && (request.resource.data.get('objetivoCentavos', null) == null
+            || (request.resource.data.get('objetivoCentavos', null) is int
+                && request.resource.data.get('objetivoCentavos', null) >= 0
+                && request.resource.data.get('objetivoCentavos', null) <= 1000000000))
+        && request.resource.data.desde is timestamp
+        && (request.resource.data.get('hasta', null) == null
+            || (request.resource.data.get('hasta', null) is timestamp
+                && request.resource.data.get('hasta', null) >= request.resource.data.desde));
     }
   }
 }

@@ -14,10 +14,10 @@ import 'transacciones_service.dart';
 
 class FinanzasRepo extends ChangeNotifier {
   FinanzasRepo(String uid)
-      : transacciones = TransaccionesService(uid),
-        tarjetasSvc = TarjetasService(uid),
-        cuentasSvc = CuentasBancariasService(uid),
-        planesSvc = PlanesService(uid) {
+    : transacciones = TransaccionesService(uid),
+      tarjetasSvc = TarjetasService(uid),
+      cuentasSvc = CuentasBancariasService(uid),
+      planesSvc = PlanesService(uid) {
     _subs = [
       transacciones.observar().listen((v) {
         _lote = v;
@@ -69,8 +69,7 @@ class FinanzasRepo extends ChangeNotifier {
   List<PlanAhorro> get planes => _planes!;
   List<Tarjeta> get tarjetas => _tarjetas!.where((t) => t.activa).toList();
   List<Tarjeta> get archivadas => _tarjetas!.where((t) => !t.activa).toList();
-  List<CuentaBancaria> get cuentas =>
-      _cuentas!.where((c) => c.activa).toList();
+  List<CuentaBancaria> get cuentas => _cuentas!.where((c) => c.activa).toList();
   List<CuentaBancaria> get cuentasArchivadas =>
       _cuentas!.where((c) => !c.activa).toList();
 
@@ -82,15 +81,27 @@ class FinanzasRepo extends ChangeNotifier {
   List<EstadoTarjeta> get estadosTarjetas =>
       estadoTarjetas(lote.items, tarjetas, DateTime.now());
   int restanteTarjeta(String id) =>
-      estadosTarjetas.where((e) => e.tarjeta.id == id).map((e) => e.restante).firstOrNull ?? 0;
+      estadosTarjetas
+          .where((e) => e.tarjeta.id == id)
+          .map((e) => e.restante)
+          .firstOrNull ??
+      0;
   int ahorroDe(PlanAhorro p) => ahorroPlan(p, lote.items, DateTime.now());
   int get ahorroTotal => planes.fold(0, (a, p) => a + ahorroDe(p));
   PresupuestoSemanal get semana => calcularSemana(
-      movs: lote.items,
-      tarjetas: tarjetas,
-      planes: planes,
-      ahora: DateTime.now(),
-      cuentasBancarias: cuentas);
+    movs: lote.items,
+    tarjetas: tarjetas,
+    planes: planes,
+    ahora: DateTime.now(),
+    cuentasBancarias: cuentas,
+  );
+
+  int get asignacionSemanalOptimista => semana.asignacionOptimista;
+  int get asignacionSemanalPesimista => semana.asignacionPesimista;
+  int get puedoGastarSemanaOptimista => semana.quedanOptimista;
+  int get puedoGastarSemanaPesimista => semana.quedanPesimista;
+  double get semanasExactasRestantes => semana.semanasExactas;
+  int get semanasCompletasRestantes => semana.semanasRestantesEnteras;
 
   bool esCuentaBancaria(String id) => _cuentas!.any((c) => c.id == id);
   bool esTarjetaCredito(String id) => _tarjetas!.any((t) => t.id == id);

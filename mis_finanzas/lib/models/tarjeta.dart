@@ -1,8 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../services/cifrado_service.dart';
+
 const bancos = [
-  'Banco Agrícola', 'Banco Cuscatlán', 'Davivienda', 'BAC Credomatic',
-  'Banco Promerica', 'Banco Hipotecario', 'Banco Industrial', 'Banco Azul',
+  'Banco Agrícola',
+  'Banco Cuscatlán',
+  'Davivienda',
+  'BAC Credomatic',
+  'Banco Promerica',
+  'Banco Hipotecario',
+  'Banco Industrial',
+  'Banco Azul',
   'Otro',
 ];
 
@@ -26,14 +34,15 @@ class Tarjeta {
   final DateTime creada;
 
   String get bancoCorto => banco.replaceFirst('Banco ', '');
-  String get nombre => alias.trim().isEmpty ? bancoCorto : '$bancoCorto · ${alias.trim()}';
+  String get nombre =>
+      alias.trim().isEmpty ? bancoCorto : '$bancoCorto · ${alias.trim()}';
 
   factory Tarjeta.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data()!;
     return Tarjeta(
       id: doc.id,
       banco: d['banco'] as String? ?? 'Otro',
-      alias: d['alias'] as String? ?? '',
+      alias: CifradoService.descifrar(d['alias'] as String? ?? ''),
       limiteMensualCentavos: (d['limiteMensualCentavos'] as num).toInt(),
       activa: d['activa'] as bool? ?? true,
       creada: (d['creada'] as Timestamp).toDate(),
@@ -41,10 +50,10 @@ class Tarjeta {
   }
 
   Map<String, dynamic> toMap() => {
-        'banco': banco,
-        'alias': alias,
-        'limiteMensualCentavos': limiteMensualCentavos,
-        'activa': activa,
-        'creada': Timestamp.fromDate(creada),
-      };
+    'banco': banco,
+    'alias': CifradoService.cifrar(alias),
+    'limiteMensualCentavos': limiteMensualCentavos,
+    'activa': activa,
+    'creada': Timestamp.fromDate(creada),
+  };
 }

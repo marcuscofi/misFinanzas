@@ -1,30 +1,32 @@
 import 'package:flutter/material.dart';
+
 import 'paleta.dart';
 
 ThemeData construirTema() {
-  final scheme = ColorScheme.fromSeed(
-    seedColor: Paleta.esmeralda,
-    brightness: Brightness.dark,
-  ).copyWith(
-    primary: Paleta.esmeralda,
-    onPrimary: Colors.black,
-    secondary: Paleta.menta,
-    onSecondary: Colors.black,
-    tertiary: Paleta.lima,
-    onTertiary: Colors.black,
-    surface: Paleta.superficie,
-    onSurface: const Color(0xFFE8F2EC),
-    error: Paleta.gasto,
-    outline: Paleta.textoSuave,
-    outlineVariant: Colors.white12,
-    secondaryContainer: const Color(0xFF16322B),
-    onSecondaryContainer: Paleta.menta,
-  );
+  final scheme =
+      ColorScheme.fromSeed(
+        seedColor: Paleta.esmeralda,
+        brightness: Brightness.dark,
+      ).copyWith(
+        primary: Paleta.esmeralda,
+        onPrimary: Colors.black,
+        secondary: Paleta.menta,
+        onSecondary: Colors.black,
+        tertiary: Paleta.lima,
+        onTertiary: Colors.black,
+        surface: Paleta.superficie,
+        onSurface: const Color(0xFFE8F2EC),
+        error: Paleta.gasto,
+        outline: Paleta.textoSuave,
+        outlineVariant: Colors.white12,
+        secondaryContainer: const Color(0xFF16322B),
+        onSecondaryContainer: Paleta.menta,
+      );
 
   OutlineInputBorder borde(Color c, [double w = 1]) => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: c, width: w),
-      );
+    borderRadius: BorderRadius.circular(16),
+    borderSide: BorderSide(color: c, width: w),
+  );
 
   return ThemeData(
     useMaterial3: true,

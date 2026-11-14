@@ -43,11 +43,11 @@ class PlanAhorro {
   }
 
   Map<String, dynamic> toMap() => {
-        'nombre': nombre,
-        'regla': regla.name,
-        'valor': valor,
-        'objetivoCentavos': objetivoCentavos,
-        'desde': Timestamp.fromDate(desde),
-        'hasta': hasta == null ? null : Timestamp.fromDate(hasta!),
-      };
+    'nombre': nombre,
+    'regla': regla.name,
+    'valor': valor,
+    'objetivoCentavos': objetivoCentavos,
+    'desde': Timestamp.fromDate(desde),
+    'hasta': hasta == null ? null : Timestamp.fromDate(hasta!),
+  };
 }

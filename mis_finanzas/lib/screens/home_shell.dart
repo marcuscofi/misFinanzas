@@ -11,8 +11,16 @@ import 'banca_page.dart';
 
 const _destinos = [
   (icono: Icons.home_outlined, activo: Icons.home_rounded, texto: 'Inicio'),
-  (icono: Icons.receipt_long_outlined, activo: Icons.receipt_long, texto: 'Movimientos'),
-  (icono: Icons.account_balance_wallet_outlined, activo: Icons.account_balance_wallet, texto: 'Banca'),
+  (
+    icono: Icons.receipt_long_outlined,
+    activo: Icons.receipt_long,
+    texto: 'Movimientos',
+  ),
+  (
+    icono: Icons.account_balance_wallet_outlined,
+    activo: Icons.account_balance_wallet,
+    texto: 'Banca',
+  ),
   (icono: Icons.savings_outlined, activo: Icons.savings, texto: 'Ahorro'),
 ];
 
@@ -42,15 +50,20 @@ class _HomeShellState extends State<HomeShell> {
           return Scaffold(body: Center(child: Text('Error: ${_repo.error}')));
         }
         if (!_repo.listo) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
-        final cuerpo = IndexedStack(index: _tab, children: [
-          InicioPage(repo: _repo, onVerTodos: () => setState(() => _tab = 1)),
-          MovimientosPage(repo: _repo),
-          BancaPage(repo: _repo),
-          AhorroPage(repo: _repo),
-        ]);
+        final cuerpo = IndexedStack(
+          index: _tab,
+          children: [
+            InicioPage(repo: _repo, onVerTodos: () => setState(() => _tab = 1)),
+            MovimientosPage(repo: _repo),
+            BancaPage(repo: _repo),
+            AhorroPage(repo: _repo),
+          ],
+        );
 
         // El botón "Nuevo" solo en Inicio y Movimientos.
         final fab = _tab <= 1
@@ -63,44 +76,50 @@ class _HomeShellState extends State<HomeShell> {
               )
             : null;
 
-        return LayoutBuilder(builder: (context, c) {
-          if (c.maxWidth >= 840) {
-            return Scaffold(
-              floatingActionButton: fab,
-              body: Row(children: [
-                NavigationRail(
-                  selectedIndex: _tab,
-                  onDestinationSelected: (i) => setState(() => _tab = i),
-                  labelType: NavigationRailLabelType.all,
-                  destinations: [
-                    for (final d in _destinos)
-                      NavigationRailDestination(
-                          icon: Icon(d.icono),
-                          selectedIcon: Icon(d.activo),
-                          label: Text(d.texto)),
+        return LayoutBuilder(
+          builder: (context, c) {
+            if (c.maxWidth >= 840) {
+              return Scaffold(
+                floatingActionButton: fab,
+                body: Row(
+                  children: [
+                    NavigationRail(
+                      selectedIndex: _tab,
+                      onDestinationSelected: (i) => setState(() => _tab = i),
+                      labelType: NavigationRailLabelType.all,
+                      destinations: [
+                        for (final d in _destinos)
+                          NavigationRailDestination(
+                            icon: Icon(d.icono),
+                            selectedIcon: Icon(d.activo),
+                            label: Text(d.texto),
+                          ),
+                      ],
+                    ),
+                    const VerticalDivider(width: 1, color: Colors.white10),
+                    Expanded(child: cuerpo),
                   ],
                 ),
-                const VerticalDivider(width: 1, color: Colors.white10),
-                Expanded(child: cuerpo),
-              ]),
-            );
-          }
-          return Scaffold(
-            floatingActionButton: fab,
-            body: cuerpo,
-            bottomNavigationBar: NavigationBar(
-              selectedIndex: _tab,
-              onDestinationSelected: (i) => setState(() => _tab = i),
-              destinations: [
-                for (final d in _destinos)
-                  NavigationDestination(
+              );
+            }
+            return Scaffold(
+              floatingActionButton: fab,
+              body: cuerpo,
+              bottomNavigationBar: NavigationBar(
+                selectedIndex: _tab,
+                onDestinationSelected: (i) => setState(() => _tab = i),
+                destinations: [
+                  for (final d in _destinos)
+                    NavigationDestination(
                       icon: Icon(d.icono),
                       selectedIcon: Icon(d.activo),
-                      label: d.texto),
-              ],
-            ),
-          );
-        });
+                      label: d.texto,
+                    ),
+                ],
+              ),
+            );
+          },
+        );
       },
     );
   }
