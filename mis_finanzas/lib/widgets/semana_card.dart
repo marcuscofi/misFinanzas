@@ -1,3 +1,4 @@
+// lib/widgets/semana_card.dart
 import 'package:flutter/material.dart';
 
 import '../theme/paleta.dart';
@@ -34,7 +35,7 @@ class SemanaCard extends StatelessWidget {
         ),
       );
     }
-    final exceso = s.quedanPesimista < 0;
+    final exceso = s.quedanOptimista < 0;
     final color = exceso
         ? Paleta.gasto
         : (s.progreso > 0.8 ? Colors.amber : Paleta.esmeralda);
@@ -59,15 +60,13 @@ class SemanaCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            exceso
-                ? 'Te pasaste por (conservador)'
-                : 'Aún puedes gastar (conservador)',
+            exceso ? 'Te pasaste por' : 'Aún puedes gastar',
             style: tema.textTheme.bodySmall?.copyWith(
               color: tema.colorScheme.outline,
             ),
           ),
           Text(
-            formatoUsd(exceso ? -s.quedanPesimista : s.quedanPesimista),
+            formatoUsd(exceso ? -s.quedanOptimista : s.quedanOptimista),
             style: tema.textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.w800,
               color: exceso ? Paleta.gasto : null,
@@ -92,7 +91,7 @@ class SemanaCard extends StatelessWidget {
                 style: tema.textTheme.bodySmall,
               ),
               Text(
-                'de ${formatoUsd(s.asignacionPesimista)}',
+                'de ${formatoUsd(s.asignacionOptimista)}',
                 style: tema.textTheme.bodySmall,
               ),
             ],
@@ -127,30 +126,23 @@ class SemanaCard extends StatelessWidget {
             child: Column(
               children: [
                 _Escenario(
-                  titulo: 'Conservador',
-                  detalle: 'Cubre todos los días restantes',
-                  asignacion: s.asignacionPesimista,
-                  quedan: s.quedanPesimista,
+                  titulo: 'Optimista (Principal)',
+                  detalle:
+                      'Solo ${s.semanasRestantesEnteras} ${s.semanasRestantesEnteras == 1 ? 'semana' : 'semanas'}',
+                  asignacion: s.asignacionOptimista,
+                  quedan: s.quedanOptimista,
                   color: color,
                   destacado: true,
                 ),
                 const Divider(height: 18, color: Colors.white12),
                 _Escenario(
-                  titulo: 'Optimista',
-                  detalle:
-                      'Solo ${s.semanasRestantesEnteras} ${s.semanasRestantesEnteras == 1 ? 'semana completa' : 'semanas completas'}',
-                  asignacion: s.asignacionOptimista,
-                  quedan: s.quedanOptimista,
+                  titulo: 'Conservador / Pesimista',
+                  detalle: 'Cubre los $semanas sem. exactas',
+                  asignacion: s.asignacionPesimista,
+                  quedan: s.quedanPesimista,
                   color: Paleta.menta,
                 ),
               ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'El cálculo principal usa el escenario conservador para no quedarte sin fondos en los últimos días del mes.',
-            style: tema.textTheme.bodySmall?.copyWith(
-              color: tema.colorScheme.outline,
             ),
           ),
         ],
@@ -183,7 +175,7 @@ class _Escenario extends StatelessWidget {
     return Row(
       children: [
         Icon(
-          destacado ? Icons.shield_outlined : Icons.speed,
+          destacado ? Icons.speed : Icons.shield_outlined,
           size: 18,
           color: color,
         ),
