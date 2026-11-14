@@ -35,7 +35,7 @@ class SemanaCard extends StatelessWidget {
         ),
       );
     }
-    final exceso = s.quedanOptimista < 0;
+    final exceso = s.quedanPesimista < 0;
     final color = exceso
         ? Paleta.gasto
         : (s.progreso > 0.8 ? Colors.amber : Paleta.esmeralda);
@@ -66,7 +66,7 @@ class SemanaCard extends StatelessWidget {
             ),
           ),
           Text(
-            formatoUsd(exceso ? -s.quedanOptimista : s.quedanOptimista),
+            formatoUsd(exceso ? -s.quedanPesimista : s.quedanPesimista),
             style: tema.textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.w800,
               color: exceso ? Paleta.gasto : null,
@@ -91,7 +91,7 @@ class SemanaCard extends StatelessWidget {
                 style: tema.textTheme.bodySmall,
               ),
               Text(
-                'de ${formatoUsd(s.asignacionOptimista)}',
+                'de ${formatoUsd(s.asignacionPesimista)}',
                 style: tema.textTheme.bodySmall,
               ),
             ],
@@ -109,8 +109,7 @@ class SemanaCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Quedan ${s.diasRestantesEnMes} días en el mes: '
-            '${s.semanasRestantesEnteras} ${s.semanasRestantesEnteras == 1 ? 'semana completa' : 'semanas completas'} '
+            'Se reparte para las ${s.semanasRestantesEnteras} ${s.semanasRestantesEnteras == 1 ? 'semana restante' : 'semanas restantes'} '
             '($semanas ${semanas == '1' ? 'semana exacta' : 'semanas exactas'}).',
             style: tema.textTheme.bodySmall?.copyWith(
               color: tema.colorScheme.outline,
@@ -126,20 +125,20 @@ class SemanaCard extends StatelessWidget {
             child: Column(
               children: [
                 _Escenario(
-                  titulo: 'Optimista (Principal)',
-                  detalle:
-                      'Solo ${s.semanasRestantesEnteras} ${s.semanasRestantesEnteras == 1 ? 'semana' : 'semanas'}',
-                  asignacion: s.asignacionOptimista,
-                  quedan: s.quedanOptimista,
+                  titulo: 'Conservador / Preciso',
+                  detalle: 'Cubre los $semanas sem. exactas',
+                  asignacion: s.asignacionPesimista,
+                  quedan: s.quedanPesimista,
                   color: color,
                   destacado: true,
                 ),
                 const Divider(height: 18, color: Colors.white12),
                 _Escenario(
-                  titulo: 'Conservador / Pesimista',
-                  detalle: 'Cubre los $semanas sem. exactas',
-                  asignacion: s.asignacionPesimista,
-                  quedan: s.quedanPesimista,
+                  titulo: 'Optimista',
+                  detalle:
+                      'Solo ${s.semanasRestantesEnteras} ${s.semanasRestantesEnteras == 1 ? 'semana' : 'semanas'}',
+                  asignacion: s.asignacionOptimista,
+                  quedan: s.quedanOptimista,
                   color: Paleta.menta,
                 ),
               ],
@@ -175,7 +174,7 @@ class _Escenario extends StatelessWidget {
     return Row(
       children: [
         Icon(
-          destacado ? Icons.speed : Icons.shield_outlined,
+          destacado ? Icons.shield_outlined : Icons.speed,
           size: 18,
           color: color,
         ),

@@ -90,17 +90,18 @@ class PresupuestoSemanal {
   final double semanasExactas;
   final int efectivoLibre, cuentasRestante, tarjetasRestante, ahorroApartado;
 
-  int get quedanOptimista => asignacionOptimista - gastado;
+  // El cálculo principal usa el escenario pesimista/exacto (2.3 semanas) 
+  // para que las cuentas cubran correctamente los días restantes.
   int get quedanPesimista => asignacionPesimista - gastado;
+  int get quedanOptimista => asignacionOptimista - gastado;
 
-  // El monto principal para gastar usa el escenario OPTIMISTA
-  int get quedan => quedanOptimista;
-  int get asignacion => asignacionOptimista;
+  int get quedan => quedanPesimista;
+  int get asignacion => asignacionPesimista;
   int get semanasRestantes => semanasRestantesEnteras;
 
-  double get progreso => asignacionOptimista <= 0
+  double get progreso => asignacionPesimista <= 0
       ? (gastado > 0 ? 1.0 : 0.0)
-      : (gastado / asignacionOptimista).clamp(0.0, 1.0).toDouble();
+      : (gastado / asignacionPesimista).clamp(0.0, 1.0).toDouble();
 }
 
 PresupuestoSemanal calcularSemana({
@@ -148,9 +149,8 @@ PresupuestoSemanal calcularSemana({
     }
   }
 
-  // CORRECCIÓN: El disponible real excluye las líneas de crédito (tarjetasRestante)
-  // para evitar inflar artificialmente el dinero de bolsillo con deuda.
-  final disponible = efectivo + cuentasSaldo - ahorro;
+  // Se incluye tarjetasRestante para que tome en cuenta el presupuesto disponible real de tu tarjeta ($88.44).
+  final disponible = efectivo + cuentasSaldo - ahorro + tarjetasRestante;
   final baseSemanal = math.max(0, disponible + gastado);
   
   final asignacionOptimista = baseSemanal ~/ semanasRestantesEnteras;
