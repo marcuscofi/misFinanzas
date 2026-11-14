@@ -51,6 +51,3 @@ app.*.map.json
 env.json
 env.*.json
 !env.example.json
-
-# Ya no se usa
-lib/firebase_options.dart
