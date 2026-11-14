@@ -22,20 +22,68 @@ class _ScrollWeb extends MaterialScrollBehavior {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  FirebaseConfig.validar();
-  CifradoService.validarConfiguracion();
+  try {
+    FirebaseConfig.validar();
+    CifradoService.validarConfiguracion();
 
-  await Firebase.initializeApp(options: FirebaseConfig.options);
+    await Firebase.initializeApp(options: FirebaseConfig.options);
 
-  // Debe ejecutarse antes de cualquier otra operación con Firestore.
-  FirebaseFirestore.instance.settings = const Settings(
-    persistenceEnabled: true,
-    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-  );
+    // Debe ejecutarse antes de cualquier otra operación con Firestore.
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
 
-  await initializeDateFormatting('es');
+    await initializeDateFormatting('es');
 
-  runApp(const MyApp());
+    runApp(const MyApp());
+  } catch (error) {
+    runApp(_ErrorArranqueApp(error: '$error'));
+  }
+}
+
+/// Evita la pantalla negra cuando falta configuración en el despliegue.
+class _ErrorArranqueApp extends StatelessWidget {
+  const _ErrorArranqueApp({required this.error});
+
+  final String error;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Mis Finanzas',
+      debugShowCheckedModeBanner: false,
+      theme: construirTema(),
+      themeMode: ThemeMode.dark,
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.settings_suggest, size: 48),
+                const SizedBox(height: 16),
+                const Text(
+                  'No se pudo iniciar Mis Finanzas',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                Text(error, textAlign: TextAlign.center),
+                const SizedBox(height: 12),
+                const Text(
+                  'Revisa las variables de entorno del despliegue '
+                  '(FIREBASE_* y E2EE_KEY).',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
